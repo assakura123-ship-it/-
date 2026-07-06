@@ -1,0 +1,9 @@
+{
+  "log_level": "INFO",
+  "max_file_size_mb": 10,
+  "backup_count": 5,
+  "enable_console": true,
+  "enable_file": true,
+  "log_format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+  "date_format": "%Y-%m-%d %H:%M:%S"
+}

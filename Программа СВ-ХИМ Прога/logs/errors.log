@@ -1,0 +1,937 @@
+2026-01-26 13:31:21 - StartWindow - ERROR - Ошибка создания вкладки импорта/экспорта: name 'BooleanVar' is not defined
+2026-01-26 13:31:21 - StartWindow - ERROR - Ошибка создания виджетов: name 'BooleanVar' is not defined
+2026-01-26 13:31:21 - Errors - ERROR - ОШИБКА: Ошибка создания виджетов
+2026-01-26 13:31:21 - Errors - ERROR - Тип исключения: NameError
+2026-01-26 13:31:21 - Errors - ERROR - Сообщение исключения: name 'BooleanVar' is not defined
+2026-01-26 13:31:21 - Errors - ERROR - Трассировка стека:
+2026-01-26 13:31:21 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-26 13:31:21 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\main.py", line 851, in create_widgets
+2026-01-26 13:31:21 - Errors - ERROR -       self.create_import_export_tab()  # Новая вкладка для импорта/экспорта
+2026-01-26 13:31:21 - Errors - ERROR -       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+2026-01-26 13:31:21 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\main.py", line 1496, in create_import_export_tab
+2026-01-26 13:31:21 - Errors - ERROR -       self.replace_data_var = BooleanVar(value=False)
+2026-01-26 13:31:21 - Errors - ERROR -                               ^^^^^^^^^^
+2026-01-26 13:31:21 - Errors - ERROR -   NameError: name 'BooleanVar' is not defined
+2026-01-26 13:31:21 - root - CRITICAL - Критическая ошибка при запуске программы: name 'BooleanVar' is not defined
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\main.py", line 3634, in main
+    app = StartWindow(root)
+  File "E:\Программа СВ-ХИМ\main.py", line 809, in __init__
+    self.create_widgets()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Программа СВ-ХИМ\main.py", line 851, in create_widgets
+    self.create_import_export_tab()  # Новая вкладка для импорта/экспорта
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Программа СВ-ХИМ\main.py", line 1496, in create_import_export_tab
+    self.replace_data_var = BooleanVar(value=False)
+                            ^^^^^^^^^^
+NameError: name 'BooleanVar' is not defined
+2026-01-26 13:38:55 - DatabaseManager - ERROR - Ошибка импорта из Excel: '>' not supported between instances of 'str' and 'int'
+2026-01-26 13:39:05 - StartWindow - ERROR - Ошибка импорта данных из E:/Программа СВ-ХИМ/продукты_рецептуры.xlsx.xlsx
+2026-01-26 13:40:08 - DatabaseManager - ERROR - Ошибка импорта из Excel: '>' not supported between instances of 'str' and 'int'
+2026-01-26 13:42:41 - StartWindow - ERROR - Ошибка импорта данных из E:/Программа СВ-ХИМ/продукты_рецептуры.xlsx.xlsx
+2026-01-26 13:43:14 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 13:53:11 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 13:56:12 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 14:01:04 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 14:01:20 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 14:01:21 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 14:01:21 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 14:01:22 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 14:01:22 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 14:15:40 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 14:38:06 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 14:49:53 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 14:49:53 - StartWindow - ERROR - Ошибка создания виджетов: name 'warehouse_tab' is not defined
+2026-01-26 14:49:53 - Errors - ERROR - ОШИБКА: Ошибка создания виджетов
+2026-01-26 14:49:53 - Errors - ERROR - Тип исключения: NameError
+2026-01-26 14:49:53 - Errors - ERROR - Сообщение исключения: name 'warehouse_tab' is not defined
+2026-01-26 14:49:53 - Errors - ERROR - Трассировка стека:
+2026-01-26 14:49:53 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-26 14:49:53 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\main.py", line 1005, in create_widgets
+2026-01-26 14:49:53 - Errors - ERROR -       control_frame = Frame(warehouse_tab, bg='#f8f9fa')
+2026-01-26 14:49:53 - Errors - ERROR -                             ^^^^^^^^^^^^^
+2026-01-26 14:49:53 - Errors - ERROR -   NameError: name 'warehouse_tab' is not defined
+2026-01-26 14:49:53 - root - CRITICAL - Критическая ошибка при запуске программы: name 'warehouse_tab' is not defined
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\main.py", line 4030, in main
+    app = StartWindow(root)
+  File "E:\Программа СВ-ХИМ\main.py", line 960, in __init__
+    self.create_widgets()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Программа СВ-ХИМ\main.py", line 1005, in create_widgets
+    control_frame = Frame(warehouse_tab, bg='#f8f9fa')
+                          ^^^^^^^^^^^^^
+NameError: name 'warehouse_tab' is not defined
+2026-01-26 14:58:14 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 14:58:25 - StartWindow - ERROR - Ошибка импорта склада: 'DatabaseManager' object has no attribute 'import_warehouse_from_excel'
+2026-01-26 14:59:32 - Errors - ERROR - ОШИБКА: Ошибка импорта склада
+2026-01-26 14:59:32 - Errors - ERROR - Тип исключения: AttributeError
+2026-01-26 14:59:32 - Errors - ERROR - Сообщение исключения: 'DatabaseManager' object has no attribute 'import_warehouse_from_excel'
+2026-01-26 14:59:32 - Errors - ERROR - Трассировка стека:
+2026-01-26 14:59:32 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-26 14:59:32 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\main.py", line 2182, in import_warehouse_from_excel
+2026-01-26 14:59:32 - Errors - ERROR -       success = db_manager.import_warehouse_from_excel(filename)
+2026-01-26 14:59:32 - Errors - ERROR -                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-26 14:59:32 - Errors - ERROR -   AttributeError: 'DatabaseManager' object has no attribute 'import_warehouse_from_excel'
+2026-01-26 14:59:40 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 15:07:30 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 15:08:28 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 15:17:47 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 16:16:36 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 16:16:36 - StartWindow - ERROR - Ошибка создания вкладки импорта/экспорта: name 'Checkbutton' is not defined
+2026-01-26 16:16:36 - StartWindow - ERROR - Ошибка создания виджетов: name 'Checkbutton' is not defined
+2026-01-26 16:16:36 - Errors - ERROR - ОШИБКА: Ошибка создания виджетов
+2026-01-26 16:16:36 - Errors - ERROR - Тип исключения: NameError
+2026-01-26 16:16:36 - Errors - ERROR - Сообщение исключения: name 'Checkbutton' is not defined
+2026-01-26 16:16:36 - Errors - ERROR - Трассировка стека:
+2026-01-26 16:16:36 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-26 16:16:36 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\main.py", line 850, in create_widgets
+2026-01-26 16:16:36 - Errors - ERROR -       self.create_import_export_tab()  # Новая вкладка для импорта/экспорта
+2026-01-26 16:16:36 - Errors - ERROR -       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+2026-01-26 16:16:36 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\main.py", line 1496, in create_import_export_tab
+2026-01-26 16:16:36 - Errors - ERROR -       Checkbutton(options_frame, text="Заменить существующие данные",
+2026-01-26 16:16:36 - Errors - ERROR -       ^^^^^^^^^^^
+2026-01-26 16:16:36 - Errors - ERROR -   NameError: name 'Checkbutton' is not defined
+2026-01-26 16:16:36 - root - CRITICAL - Критическая ошибка при запуске программы: name 'Checkbutton' is not defined
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\main.py", line 3633, in main
+    app = StartWindow(root)
+  File "E:\Программа СВ-ХИМ\main.py", line 808, in __init__
+    self.create_widgets()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Программа СВ-ХИМ\main.py", line 850, in create_widgets
+    self.create_import_export_tab()  # Новая вкладка для импорта/экспорта
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Программа СВ-ХИМ\main.py", line 1496, in create_import_export_tab
+    Checkbutton(options_frame, text="Заменить существующие данные",
+    ^^^^^^^^^^^
+NameError: name 'Checkbutton' is not defined
+2026-01-26 16:24:16 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 16:46:35 - root - CRITICAL - Критическая ошибка при запуске программы: 'StartWindow' object has no attribute 'load_saved_cards'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\main.py", line 19, in main
+    app = StartWindow(root)
+  File "E:\Программа СВ-ХИМ\modules\start_window.py", line 29, in __init__
+    self.load_saved_cards()
+    ^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'StartWindow' object has no attribute 'load_saved_cards'
+2026-01-26 17:03:15 - StartWindow - ERROR - Ошибка получения статистики: 'DatabaseManager' object has no attribute 'get_products'
+2026-01-26 17:03:15 - StartWindow - ERROR - Ошибка загрузки данных склада: 'DatabaseManager' object has no attribute 'get_warehouse_items'
+2026-01-26 17:03:15 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'DatabaseManager' object has no attribute 'get_products'
+2026-01-26 17:03:16 - StartWindow - ERROR - Ошибка загрузки списка карт: 'DatabaseManager' object has no attribute 'get_loading_cards'
+2026-01-26 17:03:16 - Errors - ERROR - ОШИБКА: Ошибка загрузки списка карт
+2026-01-26 17:03:16 - Errors - ERROR - Тип исключения: AttributeError
+2026-01-26 17:03:16 - Errors - ERROR - Сообщение исключения: 'DatabaseManager' object has no attribute 'get_loading_cards'
+2026-01-26 17:03:16 - Errors - ERROR - Трассировка стека:
+2026-01-26 17:03:16 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-26 17:03:16 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 816, in load_saved_cards
+2026-01-26 17:03:16 - Errors - ERROR -       cards = db_manager.get_loading_cards(limit=100)
+2026-01-26 17:03:16 - Errors - ERROR -               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-26 17:03:16 - Errors - ERROR -   AttributeError: 'DatabaseManager' object has no attribute 'get_loading_cards'
+2026-01-26 17:03:21 - StartWindow - ERROR - Ошибка загрузки данных склада: 'DatabaseManager' object has no attribute 'get_warehouse_items'
+2026-01-26 17:03:28 - StartWindow - ERROR - Ошибка импорта склада: 'DatabaseManager' object has no attribute 'import_warehouse_from_excel'
+2026-01-26 17:03:30 - Errors - ERROR - ОШИБКА: Ошибка импорта склада
+2026-01-26 17:03:30 - Errors - ERROR - Тип исключения: AttributeError
+2026-01-26 17:03:30 - Errors - ERROR - Сообщение исключения: 'DatabaseManager' object has no attribute 'import_warehouse_from_excel'
+2026-01-26 17:03:30 - Errors - ERROR - Трассировка стека:
+2026-01-26 17:03:30 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-26 17:03:30 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 1257, in import_warehouse_from_excel
+2026-01-26 17:03:30 - Errors - ERROR -       success = db_manager.import_warehouse_from_excel(filename)
+2026-01-26 17:03:30 - Errors - ERROR -                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-26 17:03:30 - Errors - ERROR -   AttributeError: 'DatabaseManager' object has no attribute 'import_warehouse_from_excel'
+2026-01-26 17:03:36 - StartWindow - ERROR - Ошибка открытия редактора: 'LoadingCardTab' object has no attribute 'load_products_list'
+2026-01-26 17:03:36 - Errors - ERROR - ОШИБКА: Ошибка открытия редактора
+2026-01-26 17:03:36 - Errors - ERROR - Тип исключения: AttributeError
+2026-01-26 17:03:36 - Errors - ERROR - Сообщение исключения: 'LoadingCardTab' object has no attribute 'load_products_list'
+2026-01-26 17:03:36 - Errors - ERROR - Трассировка стека:
+2026-01-26 17:03:36 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-26 17:03:36 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 1419, in open_editor_tab
+2026-01-26 17:03:36 - Errors - ERROR -       editor = LoadingCardTab(tab_frame, self)
+2026-01-26 17:03:36 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 48, in __init__
+2026-01-26 17:03:36 - Errors - ERROR -       self.load_products_list()
+2026-01-26 17:03:36 - Errors - ERROR -       ^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-26 17:03:36 - Errors - ERROR -   AttributeError: 'LoadingCardTab' object has no attribute 'load_products_list'
+2026-01-26 17:08:38 - StartWindow - ERROR - Ошибка получения статистики: 'DatabaseManager' object has no attribute 'get_products'
+2026-01-26 17:08:39 - StartWindow - ERROR - Ошибка загрузки данных склада: 'DatabaseManager' object has no attribute 'get_warehouse_items'
+2026-01-26 17:08:39 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'DatabaseManager' object has no attribute 'get_products'
+2026-01-26 17:08:39 - StartWindow - ERROR - Ошибка загрузки списка карт: 'DatabaseManager' object has no attribute 'get_loading_cards'
+2026-01-26 17:08:39 - Errors - ERROR - ОШИБКА: Ошибка загрузки списка карт
+2026-01-26 17:08:39 - Errors - ERROR - Тип исключения: AttributeError
+2026-01-26 17:08:39 - Errors - ERROR - Сообщение исключения: 'DatabaseManager' object has no attribute 'get_loading_cards'
+2026-01-26 17:08:39 - Errors - ERROR - Трассировка стека:
+2026-01-26 17:08:39 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-26 17:08:39 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 816, in load_saved_cards
+2026-01-26 17:08:39 - Errors - ERROR -       cards = db_manager.get_loading_cards(limit=100)
+2026-01-26 17:08:39 - Errors - ERROR -               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-26 17:08:39 - Errors - ERROR -   AttributeError: 'DatabaseManager' object has no attribute 'get_loading_cards'
+2026-01-26 17:08:48 - StartWindow - ERROR - Ошибка импорта склада: 'DatabaseManager' object has no attribute 'import_warehouse_from_excel'
+2026-01-26 17:08:49 - Errors - ERROR - ОШИБКА: Ошибка импорта склада
+2026-01-26 17:08:49 - Errors - ERROR - Тип исключения: AttributeError
+2026-01-26 17:08:49 - Errors - ERROR - Сообщение исключения: 'DatabaseManager' object has no attribute 'import_warehouse_from_excel'
+2026-01-26 17:08:49 - Errors - ERROR - Трассировка стека:
+2026-01-26 17:08:49 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-26 17:08:49 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 1257, in import_warehouse_from_excel
+2026-01-26 17:08:49 - Errors - ERROR -       success = db_manager.import_warehouse_from_excel(filename)
+2026-01-26 17:08:49 - Errors - ERROR -                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-26 17:08:49 - Errors - ERROR -   AttributeError: 'DatabaseManager' object has no attribute 'import_warehouse_from_excel'
+2026-01-26 17:10:38 - StartWindow - ERROR - Ошибка открытия редактора: 'LoadingCardTab' object has no attribute 'load_products_list'
+2026-01-26 17:10:38 - Errors - ERROR - ОШИБКА: Ошибка открытия редактора
+2026-01-26 17:10:38 - Errors - ERROR - Тип исключения: AttributeError
+2026-01-26 17:10:38 - Errors - ERROR - Сообщение исключения: 'LoadingCardTab' object has no attribute 'load_products_list'
+2026-01-26 17:10:38 - Errors - ERROR - Трассировка стека:
+2026-01-26 17:10:38 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-26 17:10:38 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 1419, in open_editor_tab
+2026-01-26 17:10:38 - Errors - ERROR -       editor = LoadingCardTab(tab_frame, self)
+2026-01-26 17:10:38 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 48, in __init__
+2026-01-26 17:10:38 - Errors - ERROR -       self.load_products_list()
+2026-01-26 17:10:38 - Errors - ERROR -       ^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-26 17:10:38 - Errors - ERROR -   AttributeError: 'LoadingCardTab' object has no attribute 'load_products_list'
+2026-01-26 17:10:51 - StartWindow - ERROR - Ошибка открытия редактора: 'LoadingCardTab' object has no attribute 'load_products_list'
+2026-01-26 17:10:51 - Errors - ERROR - ОШИБКА: Ошибка открытия редактора
+2026-01-26 17:10:51 - Errors - ERROR - Тип исключения: AttributeError
+2026-01-26 17:10:51 - Errors - ERROR - Сообщение исключения: 'LoadingCardTab' object has no attribute 'load_products_list'
+2026-01-26 17:10:51 - Errors - ERROR - Трассировка стека:
+2026-01-26 17:10:51 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-26 17:10:51 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 1419, in open_editor_tab
+2026-01-26 17:10:51 - Errors - ERROR -       editor = LoadingCardTab(tab_frame, self)
+2026-01-26 17:10:51 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 48, in __init__
+2026-01-26 17:10:51 - Errors - ERROR -       self.load_products_list()
+2026-01-26 17:10:51 - Errors - ERROR -       ^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-26 17:10:51 - Errors - ERROR -   AttributeError: 'LoadingCardTab' object has no attribute 'load_products_list'
+2026-01-26 17:13:26 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 17:13:39 - StartWindow - ERROR - Ошибка открытия редактора: 'LoadingCardTab' object has no attribute 'load_products_list'
+2026-01-26 17:13:39 - Errors - ERROR - ОШИБКА: Ошибка открытия редактора
+2026-01-26 17:13:39 - Errors - ERROR - Тип исключения: AttributeError
+2026-01-26 17:13:39 - Errors - ERROR - Сообщение исключения: 'LoadingCardTab' object has no attribute 'load_products_list'
+2026-01-26 17:13:39 - Errors - ERROR - Трассировка стека:
+2026-01-26 17:13:39 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-26 17:13:39 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 1419, in open_editor_tab
+2026-01-26 17:13:39 - Errors - ERROR -       editor = LoadingCardTab(tab_frame, self)
+2026-01-26 17:13:39 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 48, in __init__
+2026-01-26 17:13:39 - Errors - ERROR -       self.load_products_list()
+2026-01-26 17:13:39 - Errors - ERROR -       ^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-26 17:13:39 - Errors - ERROR -   AttributeError: 'LoadingCardTab' object has no attribute 'load_products_list'
+2026-01-26 17:15:11 - StartWindow - ERROR - Ошибка открытия редактора: 'LoadingCardTab' object has no attribute 'load_products_list'
+2026-01-26 17:15:11 - Errors - ERROR - ОШИБКА: Ошибка открытия редактора
+2026-01-26 17:15:11 - Errors - ERROR - Тип исключения: AttributeError
+2026-01-26 17:15:11 - Errors - ERROR - Сообщение исключения: 'LoadingCardTab' object has no attribute 'load_products_list'
+2026-01-26 17:15:11 - Errors - ERROR - Трассировка стека:
+2026-01-26 17:15:11 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-26 17:15:11 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 1419, in open_editor_tab
+2026-01-26 17:15:11 - Errors - ERROR -       editor = LoadingCardTab(tab_frame, self)
+2026-01-26 17:15:11 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 48, in __init__
+2026-01-26 17:15:11 - Errors - ERROR -       self.load_products_list()
+2026-01-26 17:15:11 - Errors - ERROR -       ^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-26 17:15:11 - Errors - ERROR -   AttributeError: 'LoadingCardTab' object has no attribute 'load_products_list'
+2026-01-26 17:23:24 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-26 17:26:00 - modules.start_window - ERROR - Ошибка в операции 'Просмотр деталей карты' (длительность: 0.000 сек): invalid literal for int() with base 10: 'Нет'
+2026-01-26 17:26:00 - Errors - ERROR - ОШИБКА: Ошибка в операции 'Просмотр деталей карты'
+2026-01-26 17:26:00 - Errors - ERROR - Тип исключения: ValueError
+2026-01-26 17:26:00 - Errors - ERROR - Сообщение исключения: invalid literal for int() with base 10: 'Нет'
+2026-01-26 17:26:00 - Errors - ERROR - Трассировка стека:
+2026-01-26 17:26:00 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-26 17:26:00 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\logger.py", line 272, in wrapper
+2026-01-26 17:26:00 - Errors - ERROR -       result = func(*args, **kwargs)
+2026-01-26 17:26:00 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 872, in view_card_details
+2026-01-26 17:26:00 - Errors - ERROR -       card_id = int(selected_text.split()[0])  # Извлекаем ID из первой колонки
+2026-01-26 17:26:00 - Errors - ERROR -   ValueError: invalid literal for int() with base 10: 'Нет'
+2026-01-27 10:57:13 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 08:34:08 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 09:05:18 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 09:25:59 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 09:48:17 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 11:03:20 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 11:07:50 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 11:09:03 - LoadingCardTab - ERROR - Ошибка открытия норм: 'LoadingCardTab' object has no attribute 'center_window'
+2026-01-28 11:09:18 - LoadingCardTab - ERROR - Ошибка открытия норм: 'LoadingCardTab' object has no attribute 'center_window'
+2026-01-28 11:10:30 - DatabaseManager - ERROR - Не найдены необходимые колонки в Excel файле
+2026-01-28 11:10:31 - StartWindow - ERROR - Ошибка импорта данных из E:/Программа СВ-ХИМ/Внутренняя норма полуфабрикатов.xlsx
+2026-01-28 11:41:23 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 11:47:17 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 11:53:17 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 11:53:17 - StartWindow - ERROR - Ошибка создания вкладки импорта/экспорта: 'StartWindow' object has no attribute 'select_norms_file'
+2026-01-28 11:53:17 - StartWindow - ERROR - Ошибка создания виджетов: 'StartWindow' object has no attribute 'select_norms_file'
+2026-01-28 11:53:17 - Errors - ERROR - ОШИБКА: Ошибка создания виджетов
+2026-01-28 11:53:17 - Errors - ERROR - Тип исключения: AttributeError
+2026-01-28 11:53:17 - Errors - ERROR - Сообщение исключения: 'StartWindow' object has no attribute 'select_norms_file'
+2026-01-28 11:53:17 - Errors - ERROR - Трассировка стека:
+2026-01-28 11:53:17 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 11:53:17 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 73, in create_widgets
+2026-01-28 11:53:17 - Errors - ERROR -       self.create_import_export_tab()  # Новая вкладка для импорта/экспорта
+2026-01-28 11:53:17 - Errors - ERROR -       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+2026-01-28 11:53:17 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 801, in create_import_export_tab
+2026-01-28 11:53:17 - Errors - ERROR -       command=self.select_norms_file,
+2026-01-28 11:53:17 - Errors - ERROR -               ^^^^^^^^^^^^^^^^^^^^^^
+2026-01-28 11:53:17 - Errors - ERROR -   AttributeError: 'StartWindow' object has no attribute 'select_norms_file'. Did you mean: 'select_import_file'?
+2026-01-28 11:53:17 - root - CRITICAL - Критическая ошибка при запуске программы: 'StartWindow' object has no attribute 'select_norms_file'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\main.py", line 19, in main
+    app = StartWindow(root)
+  File "E:\Программа СВ-ХИМ\modules\start_window.py", line 31, in __init__
+    self.create_widgets()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Программа СВ-ХИМ\modules\start_window.py", line 73, in create_widgets
+    self.create_import_export_tab()  # Новая вкладка для импорта/экспорта
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Программа СВ-ХИМ\modules\start_window.py", line 801, in create_import_export_tab
+    command=self.select_norms_file,
+            ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'StartWindow' object has no attribute 'select_norms_file'. Did you mean: 'select_import_file'?
+2026-01-28 13:03:18 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 13:03:18 - StartWindow - ERROR - Ошибка создания вкладки импорта/экспорта: 'StartWindow' object has no attribute 'select_norms_file'
+2026-01-28 13:03:18 - StartWindow - ERROR - Ошибка создания виджетов: 'StartWindow' object has no attribute 'select_norms_file'
+2026-01-28 13:03:18 - Errors - ERROR - ОШИБКА: Ошибка создания виджетов
+2026-01-28 13:03:18 - Errors - ERROR - Тип исключения: AttributeError
+2026-01-28 13:03:18 - Errors - ERROR - Сообщение исключения: 'StartWindow' object has no attribute 'select_norms_file'
+2026-01-28 13:03:18 - Errors - ERROR - Трассировка стека:
+2026-01-28 13:03:18 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 13:03:18 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 73, in create_widgets
+2026-01-28 13:03:18 - Errors - ERROR -       self.create_import_export_tab()  # Новая вкладка для импорта/экспорта
+2026-01-28 13:03:18 - Errors - ERROR -       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+2026-01-28 13:03:18 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 801, in create_import_export_tab
+2026-01-28 13:03:18 - Errors - ERROR -       command=self.select_norms_file,
+2026-01-28 13:03:18 - Errors - ERROR -               ^^^^^^^^^^^^^^^^^^^^^^
+2026-01-28 13:03:18 - Errors - ERROR -   AttributeError: 'StartWindow' object has no attribute 'select_norms_file'. Did you mean: 'select_import_file'?
+2026-01-28 13:03:18 - root - CRITICAL - Критическая ошибка при запуске программы: 'StartWindow' object has no attribute 'select_norms_file'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\main.py", line 19, in main
+    app = StartWindow(root)
+  File "E:\Программа СВ-ХИМ\modules\start_window.py", line 31, in __init__
+    self.create_widgets()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Программа СВ-ХИМ\modules\start_window.py", line 73, in create_widgets
+    self.create_import_export_tab()  # Новая вкладка для импорта/экспорта
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Программа СВ-ХИМ\modules\start_window.py", line 801, in create_import_export_tab
+    command=self.select_norms_file,
+            ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'StartWindow' object has no attribute 'select_norms_file'. Did you mean: 'select_import_file'?
+2026-01-28 13:08:40 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 13:08:40 - StartWindow - ERROR - Ошибка создания вкладки импорта/экспорта: 'StartWindow' object has no attribute 'select_norms_file'
+2026-01-28 13:08:40 - StartWindow - ERROR - Ошибка создания виджетов: 'StartWindow' object has no attribute 'select_norms_file'
+2026-01-28 13:08:40 - Errors - ERROR - ОШИБКА: Ошибка создания виджетов
+2026-01-28 13:08:40 - Errors - ERROR - Тип исключения: AttributeError
+2026-01-28 13:08:40 - Errors - ERROR - Сообщение исключения: 'StartWindow' object has no attribute 'select_norms_file'
+2026-01-28 13:08:40 - Errors - ERROR - Трассировка стека:
+2026-01-28 13:08:40 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 13:08:40 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 73, in create_widgets
+2026-01-28 13:08:40 - Errors - ERROR -       self.create_import_export_tab()  # Новая вкладка для импорта/экспорта
+2026-01-28 13:08:40 - Errors - ERROR -       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+2026-01-28 13:08:40 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 801, in create_import_export_tab
+2026-01-28 13:08:40 - Errors - ERROR -       command=self.select_norms_file,
+2026-01-28 13:08:40 - Errors - ERROR -               ^^^^^^^^^^^^^^^^^^^^^^
+2026-01-28 13:08:40 - Errors - ERROR -   AttributeError: 'StartWindow' object has no attribute 'select_norms_file'. Did you mean: 'select_import_file'?
+2026-01-28 13:08:40 - root - CRITICAL - Критическая ошибка при запуске программы: 'StartWindow' object has no attribute 'select_norms_file'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\main.py", line 19, in main
+    app = StartWindow(root)
+  File "E:\Программа СВ-ХИМ\modules\start_window.py", line 31, in __init__
+    self.create_widgets()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Программа СВ-ХИМ\modules\start_window.py", line 73, in create_widgets
+    self.create_import_export_tab()  # Новая вкладка для импорта/экспорта
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Программа СВ-ХИМ\modules\start_window.py", line 801, in create_import_export_tab
+    command=self.select_norms_file,
+            ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'StartWindow' object has no attribute 'select_norms_file'. Did you mean: 'select_import_file'?
+2026-01-28 13:50:08 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 13:50:08 - StartWindow - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 13:50:48 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 13:50:48 - StartWindow - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 13:53:18 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 13:53:18 - StartWindow - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 13:59:14 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 13:59:14 - StartWindow - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 14:00:47 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 14:00:47 - StartWindow - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 14:03:06 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 14:03:06 - StartWindow - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 14:05:07 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 14:05:07 - StartWindow - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 14:05:40 - DatabaseManager - ERROR - Отсутствует обязательная колонка: Нижняя граница
+2026-01-28 14:06:29 - DatabaseManager - ERROR - Отсутствует обязательная колонка: Нижняя граница
+2026-01-28 14:10:40 - DatabaseManager - ERROR - Отсутствует обязательная колонка: Строка
+2026-01-28 14:11:20 - StartWindow - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 14:27:10 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 14:27:10 - StartWindow - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 14:27:25 - LoadingCardTab - ERROR - Ошибка отображения норм: 'DatabaseManager' object has no attribute 'get_product_norms'
+2026-01-28 14:34:23 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 14:34:23 - StartWindow - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 14:34:28 - DatabaseManager - ERROR - Ошибка получения норм для продукта 11121330: no such table: norms
+2026-01-28 14:34:40 - DatabaseManager - ERROR - Ошибка получения норм для продукта 11121302: no such table: norms
+2026-01-28 14:34:54 - StartWindow - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 14:35:07 - DatabaseManager - ERROR - Ошибка получения норм для продукта 11121302: no such table: norms
+2026-01-28 14:38:07 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 14:38:07 - DatabaseManager - ERROR - Ошибка получения количества норм: 'DatabaseManager' object has no attribute '_fetch_one'
+2026-01-28 14:38:22 - DatabaseManager - ERROR - Ошибка получения количества норм: 'DatabaseManager' object has no attribute '_fetch_one'
+2026-01-28 14:38:33 - DatabaseManager - ERROR - Ошибка получения норм для продукта 11121302: no such table: norms
+2026-01-28 14:38:59 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 14:38:59 - DatabaseManager - ERROR - Ошибка получения количества норм: 'DatabaseManager' object has no attribute '_fetch_one'
+2026-01-28 14:39:09 - DatabaseManager - ERROR - Ошибка получения норм для продукта 11121302: no such table: norms
+2026-01-28 14:39:23 - StartWindow - ERROR - Ошибка импорта: DatabaseManager.import_from_excel() takes 2 positional arguments but 3 were given
+2026-01-28 14:39:23 - Errors - ERROR - ОШИБКА: Ошибка импорта
+2026-01-28 14:39:23 - Errors - ERROR - Тип исключения: TypeError
+2026-01-28 14:39:23 - Errors - ERROR - Сообщение исключения: DatabaseManager.import_from_excel() takes 2 positional arguments but 3 were given
+2026-01-28 14:39:23 - Errors - ERROR - Трассировка стека:
+2026-01-28 14:39:23 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 14:39:23 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 2103, in start_import
+2026-01-28 14:39:23 - Errors - ERROR -       success = db_manager.import_from_excel(filename, self.replace_existing_var.get())
+2026-01-28 14:39:23 - Errors - ERROR -   TypeError: DatabaseManager.import_from_excel() takes 2 positional arguments but 3 were given
+2026-01-28 14:39:27 - StartWindow - ERROR - Ошибка импорта: DatabaseManager.import_from_excel() takes 2 positional arguments but 3 were given
+2026-01-28 14:39:27 - Errors - ERROR - ОШИБКА: Ошибка импорта
+2026-01-28 14:39:27 - Errors - ERROR - Тип исключения: TypeError
+2026-01-28 14:39:27 - Errors - ERROR - Сообщение исключения: DatabaseManager.import_from_excel() takes 2 positional arguments but 3 were given
+2026-01-28 14:39:27 - Errors - ERROR - Трассировка стека:
+2026-01-28 14:39:27 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 14:39:27 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 2103, in start_import
+2026-01-28 14:39:27 - Errors - ERROR -       success = db_manager.import_from_excel(filename, self.replace_existing_var.get())
+2026-01-28 14:39:27 - Errors - ERROR -   TypeError: DatabaseManager.import_from_excel() takes 2 positional arguments but 3 were given
+2026-01-28 14:39:30 - StartWindow - ERROR - Ошибка импорта: DatabaseManager.import_from_excel() takes 2 positional arguments but 3 were given
+2026-01-28 14:39:30 - Errors - ERROR - ОШИБКА: Ошибка импорта
+2026-01-28 14:39:30 - Errors - ERROR - Тип исключения: TypeError
+2026-01-28 14:39:30 - Errors - ERROR - Сообщение исключения: DatabaseManager.import_from_excel() takes 2 positional arguments but 3 were given
+2026-01-28 14:39:30 - Errors - ERROR - Трассировка стека:
+2026-01-28 14:39:30 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 14:39:30 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 2103, in start_import
+2026-01-28 14:39:30 - Errors - ERROR -       success = db_manager.import_from_excel(filename, self.replace_existing_var.get())
+2026-01-28 14:39:30 - Errors - ERROR -   TypeError: DatabaseManager.import_from_excel() takes 2 positional arguments but 3 were given
+2026-01-28 14:39:42 - DatabaseManager - ERROR - Ошибка получения количества норм: 'DatabaseManager' object has no attribute '_fetch_one'
+2026-01-28 14:39:56 - DatabaseManager - ERROR - Ошибка получения норм для продукта 11121302: no such table: norms
+2026-01-28 14:50:30 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 14:50:31 - StartWindow - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 14:50:47 - StartWindow - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 14:56:01 - StartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 14:56:01 - StartWindow - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 15:27:23 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 15:27:23 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 15:27:39 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 15:27:45 - StartWindow - ERROR - Ошибка открытия редактора: name 'Frame' is not defined
+2026-01-28 15:27:45 - Errors - ERROR - ОШИБКА: Ошибка открытия редактора
+2026-01-28 15:27:45 - Errors - ERROR - Тип исключения: NameError
+2026-01-28 15:27:45 - Errors - ERROR - Сообщение исключения: name 'Frame' is not defined
+2026-01-28 15:27:45 - Errors - ERROR - Трассировка стека:
+2026-01-28 15:27:45 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 15:27:45 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 103, in open_editor_tab
+2026-01-28 15:27:45 - Errors - ERROR -       tab_frame = Frame(self.notebook, bg='#f5f5f5')
+2026-01-28 15:27:45 - Errors - ERROR -                   ^^^^^
+2026-01-28 15:27:45 - Errors - ERROR -   NameError: name 'Frame' is not defined
+2026-01-28 15:28:33 - StartWindow - ERROR - Ошибка открытия редактора: name 'Frame' is not defined
+2026-01-28 15:28:33 - Errors - ERROR - ОШИБКА: Ошибка открытия редактора
+2026-01-28 15:28:33 - Errors - ERROR - Тип исключения: NameError
+2026-01-28 15:28:33 - Errors - ERROR - Сообщение исключения: name 'Frame' is not defined
+2026-01-28 15:28:33 - Errors - ERROR - Трассировка стека:
+2026-01-28 15:28:33 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 15:28:33 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 103, in open_editor_tab
+2026-01-28 15:28:33 - Errors - ERROR -       tab_frame = Frame(self.notebook, bg='#f5f5f5')
+2026-01-28 15:28:33 - Errors - ERROR -                   ^^^^^
+2026-01-28 15:28:33 - Errors - ERROR -   NameError: name 'Frame' is not defined
+2026-01-28 15:29:36 - StartWindow - ERROR - Ошибка открытия редактора: name 'Frame' is not defined
+2026-01-28 15:29:36 - Errors - ERROR - ОШИБКА: Ошибка открытия редактора
+2026-01-28 15:29:36 - Errors - ERROR - Тип исключения: NameError
+2026-01-28 15:29:36 - Errors - ERROR - Сообщение исключения: name 'Frame' is not defined
+2026-01-28 15:29:36 - Errors - ERROR - Трассировка стека:
+2026-01-28 15:29:36 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 15:29:36 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 103, in open_editor_tab
+2026-01-28 15:29:36 - Errors - ERROR -       tab_frame = Frame(self.notebook, bg='#f5f5f5')
+2026-01-28 15:29:36 - Errors - ERROR -                   ^^^^^
+2026-01-28 15:29:36 - Errors - ERROR -   NameError: name 'Frame' is not defined
+2026-01-28 15:29:56 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 15:30:34 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 15:30:34 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 15:34:03 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 15:34:03 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 15:55:55 - StartWindow - ERROR - Ошибка создания виджетов: WarehouseTab() takes no arguments
+2026-01-28 15:55:55 - Errors - ERROR - ОШИБКА: Ошибка создания виджетов
+2026-01-28 15:55:55 - Errors - ERROR - Тип исключения: TypeError
+2026-01-28 15:55:55 - Errors - ERROR - Сообщение исключения: WarehouseTab() takes no arguments
+2026-01-28 15:55:55 - Errors - ERROR - Трассировка стека:
+2026-01-28 15:55:55 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 15:55:55 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 65, in create_widgets
+2026-01-28 15:55:55 - Errors - ERROR -       self.tabs['warehouse'] = WarehouseTab(self.root, self.notebook, self)
+2026-01-28 15:55:55 - Errors - ERROR -                                ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-28 15:55:55 - Errors - ERROR -   TypeError: WarehouseTab() takes no arguments
+2026-01-28 15:55:55 - root - CRITICAL - Критическая ошибка при запуске программы: WarehouseTab() takes no arguments
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\main.py", line 19, in main
+    app = StartWindow(root)
+  File "E:\Программа СВ-ХИМ\modules\start_window.py", line 35, in __init__
+    self.create_widgets()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Программа СВ-ХИМ\modules\start_window.py", line 65, in create_widgets
+    self.tabs['warehouse'] = WarehouseTab(self.root, self.notebook, self)
+                             ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: WarehouseTab() takes no arguments
+2026-01-28 16:00:21 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 16:00:21 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 16:02:39 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 16:02:39 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 16:03:16 - LoadingCardTab - ERROR - Ошибка сохранения карты загрузки: 'StartWindow' object has no attribute 'load_saved_cards'
+2026-01-28 16:03:16 - Errors - ERROR - ОШИБКА: Ошибка сохранения карты загрузки
+2026-01-28 16:03:16 - Errors - ERROR - Тип исключения: AttributeError
+2026-01-28 16:03:16 - Errors - ERROR - Сообщение исключения: 'StartWindow' object has no attribute 'load_saved_cards'
+2026-01-28 16:03:16 - Errors - ERROR - Трассировка стека:
+2026-01-28 16:03:16 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 16:03:16 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 1431, in save_loading_card
+2026-01-28 16:03:16 - Errors - ERROR -       self.start_window.load_saved_cards()
+2026-01-28 16:03:16 - Errors - ERROR -       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-28 16:03:16 - Errors - ERROR -   AttributeError: 'StartWindow' object has no attribute 'load_saved_cards'
+2026-01-28 16:09:43 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 16:09:43 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 16:09:52 - StartWindow - ERROR - Ошибка открытия редактора: 'LoadingCardTab' object has no attribute 'pack'
+2026-01-28 16:09:52 - Errors - ERROR - ОШИБКА: Ошибка открытия редактора
+2026-01-28 16:09:52 - Errors - ERROR - Тип исключения: AttributeError
+2026-01-28 16:09:52 - Errors - ERROR - Сообщение исключения: 'LoadingCardTab' object has no attribute 'pack'
+2026-01-28 16:09:52 - Errors - ERROR - Трассировка стека:
+2026-01-28 16:09:52 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 16:09:52 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 107, in open_editor_tab
+2026-01-28 16:09:52 - Errors - ERROR -       editor.pack(fill='both', expand=True)
+2026-01-28 16:09:52 - Errors - ERROR -       ^^^^^^^^^^^
+2026-01-28 16:09:52 - Errors - ERROR -   AttributeError: 'LoadingCardTab' object has no attribute 'pack'
+2026-01-28 16:12:15 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 16:12:15 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 16:12:22 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'NoneType' object is not subscriptable
+2026-01-28 16:12:29 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'NoneType' object is not subscriptable
+2026-01-28 16:12:30 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'NoneType' object is not subscriptable
+2026-01-28 16:12:31 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'NoneType' object is not subscriptable
+2026-01-28 16:12:37 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'NoneType' object is not subscriptable
+2026-01-28 16:12:39 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'NoneType' object is not subscriptable
+2026-01-28 16:12:39 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'NoneType' object is not subscriptable
+2026-01-28 16:12:40 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'NoneType' object is not subscriptable
+2026-01-28 16:12:41 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'NoneType' object is not subscriptable
+2026-01-28 16:12:45 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'NoneType' object is not subscriptable
+2026-01-28 16:12:49 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'NoneType' object is not subscriptable
+2026-01-28 16:12:50 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'NoneType' object is not subscriptable
+2026-01-28 16:12:50 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'NoneType' object is not subscriptable
+2026-01-28 16:20:56 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 16:20:57 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 16:21:03 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:21:07 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:21:12 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:21:13 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:21:19 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:21:22 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:21:23 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:23:10 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 16:23:10 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 16:23:12 - LoadingCardTab - ERROR - Ошибка создания виджетов редактора: 'LoadingCardTab' object has no attribute 'show_product_norms'
+2026-01-28 16:23:12 - Errors - ERROR - ОШИБКА: Ошибка создания виджетов редактора
+2026-01-28 16:23:12 - Errors - ERROR - Тип исключения: AttributeError
+2026-01-28 16:23:12 - Errors - ERROR - Сообщение исключения: 'LoadingCardTab' object has no attribute 'show_product_norms'
+2026-01-28 16:23:12 - Errors - ERROR - Трассировка стека:
+2026-01-28 16:23:12 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 16:23:12 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 182, in create_widgets
+2026-01-28 16:23:12 - Errors - ERROR -       command=self.show_product_norms,
+2026-01-28 16:23:12 - Errors - ERROR -               ^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-28 16:23:12 - Errors - ERROR -   AttributeError: 'LoadingCardTab' object has no attribute 'show_product_norms'
+2026-01-28 16:23:13 - StartWindow - ERROR - Ошибка открытия редактора: 'LoadingCardTab' object has no attribute 'show_product_norms'
+2026-01-28 16:23:13 - Errors - ERROR - ОШИБКА: Ошибка открытия редактора
+2026-01-28 16:23:13 - Errors - ERROR - Тип исключения: AttributeError
+2026-01-28 16:23:13 - Errors - ERROR - Сообщение исключения: 'LoadingCardTab' object has no attribute 'show_product_norms'
+2026-01-28 16:23:13 - Errors - ERROR - Трассировка стека:
+2026-01-28 16:23:13 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 16:23:13 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\start_window.py", line 106, in open_editor_tab
+2026-01-28 16:23:13 - Errors - ERROR -       editor = LoadingCardTab(tab_frame, self)
+2026-01-28 16:23:13 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 46, in __init__
+2026-01-28 16:23:13 - Errors - ERROR -       self.create_widgets()
+2026-01-28 16:23:13 - Errors - ERROR -       ~~~~~~~~~~~~~~~~~~~^^
+2026-01-28 16:23:13 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 182, in create_widgets
+2026-01-28 16:23:13 - Errors - ERROR -       command=self.show_product_norms,
+2026-01-28 16:23:13 - Errors - ERROR -               ^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-28 16:23:13 - Errors - ERROR -   AttributeError: 'LoadingCardTab' object has no attribute 'show_product_norms'
+2026-01-28 16:23:31 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 16:23:31 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 16:23:34 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:30:33 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 16:30:33 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 16:30:36 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:30:37 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:30:37 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:30:39 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:30:39 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:31:34 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:31:35 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:31:36 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:31:37 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:31:38 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:31:51 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:31:52 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:31:53 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:31:54 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:31:56 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: object of type 'NoneType' has no len()
+2026-01-28 16:35:01 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 16:35:01 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 16:35:04 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+2026-01-28 16:35:04 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+2026-01-28 16:35:05 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+2026-01-28 16:35:06 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+2026-01-28 16:35:07 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+2026-01-28 16:35:08 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+2026-01-28 16:35:09 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+2026-01-28 16:49:10 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 16:49:10 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 16:49:21 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 469, in on_product_selected
+    recipes = db_manager.get_product_recipes(self.selected_product_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'get_product_recipes'. Did you mean: 'get_product_by_code'?
+2026-01-28 16:49:22 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 469, in on_product_selected
+    recipes = db_manager.get_product_recipes(self.selected_product_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'get_product_recipes'. Did you mean: 'get_product_by_code'?
+2026-01-28 16:49:23 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 469, in on_product_selected
+    recipes = db_manager.get_product_recipes(self.selected_product_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'get_product_recipes'. Did you mean: 'get_product_by_code'?
+2026-01-28 16:49:23 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 469, in on_product_selected
+    recipes = db_manager.get_product_recipes(self.selected_product_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'get_product_recipes'. Did you mean: 'get_product_by_code'?
+2026-01-28 16:49:23 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 469, in on_product_selected
+    recipes = db_manager.get_product_recipes(self.selected_product_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'get_product_recipes'. Did you mean: 'get_product_by_code'?
+2026-01-28 16:49:24 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 469, in on_product_selected
+    recipes = db_manager.get_product_recipes(self.selected_product_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'get_product_recipes'. Did you mean: 'get_product_by_code'?
+2026-01-28 16:49:24 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 469, in on_product_selected
+    recipes = db_manager.get_product_recipes(self.selected_product_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'get_product_recipes'. Did you mean: 'get_product_by_code'?
+2026-01-28 16:49:25 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 469, in on_product_selected
+    recipes = db_manager.get_product_recipes(self.selected_product_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'get_product_recipes'. Did you mean: 'get_product_by_code'?
+2026-01-28 16:49:26 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 469, in on_product_selected
+    recipes = db_manager.get_product_recipes(self.selected_product_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'get_product_recipes'. Did you mean: 'get_product_by_code'?
+2026-01-28 16:49:27 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 469, in on_product_selected
+    recipes = db_manager.get_product_recipes(self.selected_product_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'get_product_recipes'. Did you mean: 'get_product_by_code'?
+2026-01-28 16:49:32 - LoadingCardTab - ERROR - Ошибка тестовой загрузки: 'DatabaseManager' object has no attribute 'get_product_recipes'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 1021, in test_recipe_loading
+    recipes = db_manager.get_product_recipes(product_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'get_product_recipes'. Did you mean: 'get_product_by_code'?
+2026-01-28 16:49:34 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 469, in on_product_selected
+    recipes = db_manager.get_product_recipes(self.selected_product_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'get_product_recipes'. Did you mean: 'get_product_by_code'?
+2026-01-28 20:01:38 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 20:01:39 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 20:01:43 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 469, in on_product_selected
+    recipes = db_manager.get_product_recipes(self.selected_product_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'get_product_recipes'. Did you mean: 'get_product_by_code'?
+2026-01-28 20:15:56 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 20:15:57 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 20:16:00 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 469, in on_product_selected
+    recipes = db_manager.get_product_recipes(self.selected_product_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'get_product_recipes'. Did you mean: 'get_product_by_code'?
+2026-01-28 20:16:01 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 469, in on_product_selected
+    recipes = db_manager.get_product_recipes(self.selected_product_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'get_product_recipes'. Did you mean: 'get_product_by_code'?
+2026-01-28 20:16:02 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 469, in on_product_selected
+    recipes = db_manager.get_product_recipes(self.selected_product_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'get_product_recipes'. Did you mean: 'get_product_by_code'?
+2026-01-28 20:17:11 - LoadingCardTab - ERROR - Ошибка обработки выбора продукта: 'DatabaseManager' object has no attribute 'get_product_recipes'
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 469, in on_product_selected
+    recipes = db_manager.get_product_recipes(self.selected_product_id)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatabaseManager' object has no attribute 'get_product_recipes'. Did you mean: 'get_product_by_code'?
+2026-01-28 20:23:02 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 20:23:02 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 20:29:36 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 20:29:36 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 20:46:49 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 20:46:49 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 20:51:50 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 20:51:51 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 20:52:28 - ProductsTab - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 20:52:28 - ImportExportTab - ERROR - Ошибка обновления статистики норм: 'DatabaseManager' object has no attribute 'get_norms_count'
+2026-01-28 21:18:54 - root - CRITICAL - Критическая ошибка при запуске программы: name 'StartWindow' is not defined
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\main.py", line 19, in main
+    app = StartWindow(root)
+          ^^^^^^^^^^^
+NameError: name 'StartWindow' is not defined
+2026-01-28 21:22:09 - ModernStartWindow - ERROR - Ошибка создания виджетов: unknown font style "semibold"
+2026-01-28 21:22:09 - Errors - ERROR - ОШИБКА: Ошибка создания виджетов
+2026-01-28 21:22:09 - Errors - ERROR - Тип исключения: TclError
+2026-01-28 21:22:09 - Errors - ERROR - Сообщение исключения: unknown font style "semibold"
+2026-01-28 21:22:09 - Errors - ERROR - Трассировка стека:
+2026-01-28 21:22:09 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 21:22:09 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\modern_start_window.py", line 139, in create_widgets
+2026-01-28 21:22:09 - Errors - ERROR -       Label(title_frame, text="Система создания карт загрузок",
+2026-01-28 21:22:09 - Errors - ERROR -       ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-28 21:22:09 - Errors - ERROR -             font=self.fonts['h3'],
+2026-01-28 21:22:09 - Errors - ERROR -             ^^^^^^^^^^^^^^^^^^^^^^
+2026-01-28 21:22:09 - Errors - ERROR -             bg=self.colors['surface'],
+2026-01-28 21:22:09 - Errors - ERROR -             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-28 21:22:09 - Errors - ERROR -             fg=self.colors['on_surface']).pack(side='left')
+2026-01-28 21:22:09 - Errors - ERROR -             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-28 21:22:09 - Errors - ERROR -   File "C:\Users\Ivan-PC\AppData\Local\Programs\Python\Python313\Lib\tkinter\__init__.py", line 3367, in __init__
+2026-01-28 21:22:09 - Errors - ERROR -       Widget.__init__(self, master, 'label', cnf, kw)
+2026-01-28 21:22:09 - Errors - ERROR -       ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-28 21:22:09 - Errors - ERROR -   File "C:\Users\Ivan-PC\AppData\Local\Programs\Python\Python313\Lib\tkinter\__init__.py", line 2780, in __init__
+2026-01-28 21:22:09 - Errors - ERROR -       self.tk.call(
+2026-01-28 21:22:09 - Errors - ERROR -       ~~~~~~~~~~~~^
+2026-01-28 21:22:09 - Errors - ERROR -           (widgetName, self._w) + extra + self._options(cnf))
+2026-01-28 21:22:09 - Errors - ERROR -           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-28 21:22:09 - Errors - ERROR -   _tkinter.TclError: unknown font style "semibold"
+2026-01-28 21:22:09 - root - CRITICAL - Критическая ошибка при запуске программы: unknown font style "semibold"
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\main.py", line 19, in main
+    app = ModernStartWindow(root)  # Используем ModernStartWindow вместо StartWindow
+  File "E:\Программа СВ-ХИМ\modules\modern_start_window.py", line 69, in __init__
+    self.create_widgets()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Программа СВ-ХИМ\modules\modern_start_window.py", line 139, in create_widgets
+    Label(title_frame, text="Система создания карт загрузок",
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          font=self.fonts['h3'],
+          ^^^^^^^^^^^^^^^^^^^^^^
+          bg=self.colors['surface'],
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+          fg=self.colors['on_surface']).pack(side='left')
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Ivan-PC\AppData\Local\Programs\Python\Python313\Lib\tkinter\__init__.py", line 3367, in __init__
+    Widget.__init__(self, master, 'label', cnf, kw)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Ivan-PC\AppData\Local\Programs\Python\Python313\Lib\tkinter\__init__.py", line 2780, in __init__
+    self.tk.call(
+    ~~~~~~~~~~~~^
+        (widgetName, self._w) + extra + self._options(cnf))
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_tkinter.TclError: unknown font style "semibold"
+2026-01-28 21:31:18 - ModernStartWindow - ERROR - Ошибка создания вкладки карт: bad screen distance "0 20"
+2026-01-28 21:31:18 - ModernStartWindow - ERROR - Ошибка создания виджетов: bad screen distance "0 20"
+2026-01-28 21:31:18 - Errors - ERROR - ОШИБКА: Ошибка создания виджетов
+2026-01-28 21:31:18 - Errors - ERROR - Тип исключения: TclError
+2026-01-28 21:31:18 - Errors - ERROR - Сообщение исключения: bad screen distance "0 20"
+2026-01-28 21:31:18 - Errors - ERROR - Трассировка стека:
+2026-01-28 21:31:18 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 21:31:18 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\modern_start_window.py", line 168, in create_widgets
+2026-01-28 21:31:18 - Errors - ERROR -       self.create_cards_tab()
+2026-01-28 21:31:18 - Errors - ERROR -       ~~~~~~~~~~~~~~~~~~~~~^^
+2026-01-28 21:31:18 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\modern_start_window.py", line 467, in create_cards_tab
+2026-01-28 21:31:18 - Errors - ERROR -       search_frame = Frame(container, bg=self.colors['background'], pady=(0, 20))
+2026-01-28 21:31:18 - Errors - ERROR -   File "C:\Users\Ivan-PC\AppData\Local\Programs\Python\Python313\Lib\tkinter\__init__.py", line 3343, in __init__
+2026-01-28 21:31:18 - Errors - ERROR -       Widget.__init__(self, master, 'frame', cnf, {}, extra)
+2026-01-28 21:31:18 - Errors - ERROR -       ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-28 21:31:18 - Errors - ERROR -   File "C:\Users\Ivan-PC\AppData\Local\Programs\Python\Python313\Lib\tkinter\__init__.py", line 2780, in __init__
+2026-01-28 21:31:18 - Errors - ERROR -       self.tk.call(
+2026-01-28 21:31:18 - Errors - ERROR -       ~~~~~~~~~~~~^
+2026-01-28 21:31:18 - Errors - ERROR -           (widgetName, self._w) + extra + self._options(cnf))
+2026-01-28 21:31:18 - Errors - ERROR -           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-28 21:31:18 - Errors - ERROR -   _tkinter.TclError: bad screen distance "0 20"
+2026-01-28 21:31:18 - root - CRITICAL - Критическая ошибка при запуске программы: bad screen distance "0 20"
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\main.py", line 19, in main
+    app = ModernStartWindow(root)  # Используем ModernStartWindow вместо StartWindow
+  File "E:\Программа СВ-ХИМ\modules\modern_start_window.py", line 69, in __init__
+    self.create_widgets()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Программа СВ-ХИМ\modules\modern_start_window.py", line 168, in create_widgets
+    self.create_cards_tab()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Программа СВ-ХИМ\modules\modern_start_window.py", line 467, in create_cards_tab
+    search_frame = Frame(container, bg=self.colors['background'], pady=(0, 20))
+  File "C:\Users\Ivan-PC\AppData\Local\Programs\Python\Python313\Lib\tkinter\__init__.py", line 3343, in __init__
+    Widget.__init__(self, master, 'frame', cnf, {}, extra)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Ivan-PC\AppData\Local\Programs\Python\Python313\Lib\tkinter\__init__.py", line 2780, in __init__
+    self.tk.call(
+    ~~~~~~~~~~~~^
+        (widgetName, self._w) + extra + self._options(cnf))
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_tkinter.TclError: bad screen distance "0 20"
+2026-01-28 21:59:43 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 22:00:17 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 22:00:19 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 22:00:20 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 22:00:20 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 22:00:21 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 22:00:21 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 22:00:21 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 22:00:21 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 22:00:21 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 22:00:21 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 22:00:31 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 22:00:32 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 22:00:32 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 22:00:32 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 22:00:32 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 22:05:38 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 22:21:28 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 22:21:29 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 22:37:17 - ModernStartWindow - ERROR - Ошибка создания виджетов: name 'ModernChromeTabs' is not defined
+2026-01-28 22:37:17 - Errors - ERROR - ОШИБКА: Ошибка создания виджетов
+2026-01-28 22:37:17 - Errors - ERROR - Тип исключения: NameError
+2026-01-28 22:37:17 - Errors - ERROR - Сообщение исключения: name 'ModernChromeTabs' is not defined
+2026-01-28 22:37:17 - Errors - ERROR - Трассировка стека:
+2026-01-28 22:37:17 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 22:37:17 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\modern_start_window.py", line 164, in create_widgets
+2026-01-28 22:37:17 - Errors - ERROR -       self.tab_system = ModernChromeTabs(main_frame)
+2026-01-28 22:37:17 - Errors - ERROR -                         ^^^^^^^^^^^^^^^^
+2026-01-28 22:37:17 - Errors - ERROR -   NameError: name 'ModernChromeTabs' is not defined
+2026-01-28 22:37:17 - root - CRITICAL - Критическая ошибка при запуске программы: name 'ModernChromeTabs' is not defined
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\main.py", line 19, in main
+    app = ModernStartWindow(root)  # Используем ModernStartWindow вместо StartWindow
+  File "E:\Программа СВ-ХИМ\modules\modern_start_window.py", line 69, in __init__
+    self.create_widgets()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Программа СВ-ХИМ\modules\modern_start_window.py", line 164, in create_widgets
+    self.tab_system = ModernChromeTabs(main_frame)
+                      ^^^^^^^^^^^^^^^^
+NameError: name 'ModernChromeTabs' is not defined
+2026-01-28 22:37:34 - ModernStartWindow - ERROR - Ошибка создания виджетов: name 'ModernChromeTabs' is not defined
+2026-01-28 22:37:34 - Errors - ERROR - ОШИБКА: Ошибка создания виджетов
+2026-01-28 22:37:34 - Errors - ERROR - Тип исключения: NameError
+2026-01-28 22:37:34 - Errors - ERROR - Сообщение исключения: name 'ModernChromeTabs' is not defined
+2026-01-28 22:37:34 - Errors - ERROR - Трассировка стека:
+2026-01-28 22:37:34 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 22:37:34 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\modern_start_window.py", line 164, in create_widgets
+2026-01-28 22:37:34 - Errors - ERROR -       self.tab_system = ModernChromeTabs(main_frame)
+2026-01-28 22:37:34 - Errors - ERROR -                         ^^^^^^^^^^^^^^^^
+2026-01-28 22:37:34 - Errors - ERROR -   NameError: name 'ModernChromeTabs' is not defined
+2026-01-28 22:37:34 - root - CRITICAL - Критическая ошибка при запуске программы: name 'ModernChromeTabs' is not defined
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\main.py", line 19, in main
+    app = ModernStartWindow(root)  # Используем ModernStartWindow вместо StartWindow
+  File "E:\Программа СВ-ХИМ\modules\modern_start_window.py", line 69, in __init__
+    self.create_widgets()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Программа СВ-ХИМ\modules\modern_start_window.py", line 164, in create_widgets
+    self.tab_system = ModernChromeTabs(main_frame)
+                      ^^^^^^^^^^^^^^^^
+NameError: name 'ModernChromeTabs' is not defined
+2026-01-28 22:46:55 - ModernStartWindow - ERROR - Ошибка создания виджетов: name 'ModernChromeTabs' is not defined
+2026-01-28 22:46:55 - Errors - ERROR - ОШИБКА: Ошибка создания виджетов
+2026-01-28 22:46:55 - Errors - ERROR - Тип исключения: NameError
+2026-01-28 22:46:55 - Errors - ERROR - Сообщение исключения: name 'ModernChromeTabs' is not defined
+2026-01-28 22:46:55 - Errors - ERROR - Трассировка стека:
+2026-01-28 22:46:55 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-28 22:46:55 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\modern_start_window.py", line 164, in create_widgets
+2026-01-28 22:46:55 - Errors - ERROR -       self.tab_system = ModernChromeTabs(main_frame)
+2026-01-28 22:46:55 - Errors - ERROR -                         ^^^^^^^^^^^^^^^^
+2026-01-28 22:46:55 - Errors - ERROR -   NameError: name 'ModernChromeTabs' is not defined
+2026-01-28 22:46:55 - root - CRITICAL - Критическая ошибка при запуске программы: name 'ModernChromeTabs' is not defined
+Traceback (most recent call last):
+  File "E:\Программа СВ-ХИМ\main.py", line 19, in main
+    app = ModernStartWindow(root)  # Используем ModernStartWindow вместо StartWindow
+  File "E:\Программа СВ-ХИМ\modules\modern_start_window.py", line 69, in __init__
+    self.create_widgets()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "E:\Программа СВ-ХИМ\modules\modern_start_window.py", line 164, in create_widgets
+    self.tab_system = ModernChromeTabs(main_frame)
+                      ^^^^^^^^^^^^^^^^
+NameError: name 'ModernChromeTabs' is not defined
+2026-01-28 23:05:39 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 23:05:48 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 23:05:49 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 23:05:49 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 23:35:21 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 23:36:43 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-28 23:43:49 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 23:48:56 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 23:48:56 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 23:48:57 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-28 23:57:37 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-29 00:23:20 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-29 00:35:59 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-29 00:39:14 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-29 00:39:38 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-29 00:57:41 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-29 08:15:36 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-29 08:17:13 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-29 08:41:21 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-29 08:41:21 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-29 08:41:22 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-29 08:41:22 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-29 08:41:22 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-29 08:41:22 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-29 08:41:23 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-29 08:41:23 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-29 08:41:23 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-29 08:41:23 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-29 08:41:23 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-29 08:41:24 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-29 08:41:24 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-29 08:41:24 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-29 08:41:24 - LoadingCardTab - ERROR - Ошибка закрытия вкладки: 'ModernStartWindow' object has no attribute 'close_editor_tab'
+2026-01-29 09:40:02 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-29 09:57:07 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-30 08:44:26 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-30 09:06:09 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-30 09:06:15 - LoadingCardTab - ERROR - Ошибка создания виджетов редактора: 'LoadingCardTab' object has no attribute 'print_pdf'
+2026-01-30 09:06:15 - Errors - ERROR - ОШИБКА: Ошибка создания виджетов редактора
+2026-01-30 09:06:15 - Errors - ERROR - Тип исключения: AttributeError
+2026-01-30 09:06:15 - Errors - ERROR - Сообщение исключения: 'LoadingCardTab' object has no attribute 'print_pdf'
+2026-01-30 09:06:15 - Errors - ERROR - Трассировка стека:
+2026-01-30 09:06:15 - Errors - ERROR -   Traceback (most recent call last):
+2026-01-30 09:06:15 - Errors - ERROR -   File "E:\Программа СВ-ХИМ\modules\loading_card_tab.py", line 230, in create_widgets
+2026-01-30 09:06:15 - Errors - ERROR -       command=self.print_pdf,
+2026-01-30 09:06:15 - Errors - ERROR -               ^^^^^^^^^^^^^^
+2026-01-30 09:06:15 - Errors - ERROR -   AttributeError: 'LoadingCardTab' object has no attribute 'print_pdf'
+2026-01-30 09:06:15 - ModernStartWindow - ERROR - Ошибка создания редактора: 'LoadingCardTab' object has no attribute 'print_pdf'
+2026-01-30 09:23:49 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-30 09:24:31 - LoadingCardTab - ERROR - Ошибка печати PDF: No module named 'reportlab'
+2026-01-30 09:29:13 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-30 09:29:43 - LoadingCardTab - ERROR - Ошибка печати PDF: No module named 'reportlab'
+2026-01-30 09:30:44 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-30 09:31:26 - LoadingCardTab - ERROR - Ошибка печати PDF: No module named 'reportlab'
+2026-01-30 09:33:02 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-30 09:33:22 - LoadingCardTab - ERROR - Ошибка печати PDF: No module named 'reportlab'
+2026-01-30 09:35:40 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-30 09:42:33 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-30 10:13:46 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-01-30 10:13:58 - LoadingCardTab - ERROR - Ошибка открытия диалога заполнения шаблона: name 'LabelFrame' is not defined
+2026-01-30 10:14:22 - LoadingCardTab - ERROR - Ошибка открытия диалога заполнения шаблона: name 'LabelFrame' is not defined
+2026-01-30 10:55:43 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-03-11 09:45:26 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-03-11 09:47:39 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-03-11 09:47:41 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-03-11 09:51:06 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-03-11 09:51:20 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-04-10 06:10:59 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
+2026-07-06 16:12:50 - ModernStartWindow - ERROR - Ошибка загрузки данных продуктов: 'NoneType' object is not subscriptable
