@@ -18,9 +18,16 @@ class ExcelTemplateProcessor:
         self.ws = None
 
     def load_template(self, sheet_name="п."):
-        """Загрузить шаблон Excel"""
+        """Загрузить шаблон Excel.
+
+        Если физический файл шаблона отсутствует (что часто бывает при переносе
+        проекта на новое рабочее место), генерируем эквивалентный шаблон
+        программно, чтобы функционал заполнения карты загрузки продолжал
+        работать без ручной подготовки внешнего файла.
+        """
         if not os.path.exists(self.template_path):
-            raise FileNotFoundError(f"Шаблон не найден: {self.template_path}")
+            self.wb, self.ws = self._build_default_template(sheet_name)
+            return self.wb, self.ws
 
         self.wb = load_workbook(self.template_path)
 
@@ -31,6 +38,105 @@ class ExcelTemplateProcessor:
             self.ws = self.wb.active
 
         return self.wb, self.ws
+
+    def _build_default_template(self, sheet_name="п."):
+        """Сгенерировать шаблон карты загрузки "с нуля", если исходный
+        файл "ШАБЛОН КАРТЫ.xlsx" недоступен.
+
+        Разметка листа соответствует ячейкам, которые используются в методах
+        fill_basic_info / fill_components / fill_time_parameters /
+        fill_test_results / fill_signatures, поэтому заполнение данными
+        работает идентично оригинальному шаблону.
+        """
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = sheet_name
+
+        bold = Font(bold=True)
+        center = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        thin = Side(style='thin')
+        border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+        # Заголовок карты
+        ws.merge_cells('A1:K1')
+        ws['A1'].font = Font(bold=True, size=14)
+        ws['A1'].alignment = center
+
+        # Строка с параметрами партии
+        labels_row3 = {
+            'E3': 'Цех', 'F3': 'Реактор', 'G3': 'Замес', 'H3': 'Размер партии', 'I3': 'Дата выдачи'
+        }
+        for cell, text in labels_row3.items():
+            ws[cell] = text
+            ws[cell].font = bold
+            ws[cell].alignment = center
+
+        ws['E5'] = 'Партия №'
+        ws['E5'].font = bold
+        ws['A6'] = 'Дата начала приготовления'
+        ws['A6'].font = bold
+
+        # Заголовки таблицы компонентов (строка 9), данные — строки 10-19
+        header_row9 = {
+            'A9': 'Наименование компонента',
+            'D9': 'Рецептура, % на 100%',
+            'E9': 'На реактор, кг',
+            'F9': '№ Емкости, партии присадки',
+            'G9': 'Факт, кг',
+            'H9': 'Корректировка',
+            'I9': 'Темп., °С',
+            'J9': 'Время начала загрузки',
+            'K9': 'Время окончания загрузки',
+        }
+        for cell, text in header_row9.items():
+            ws[cell] = text
+            ws[cell].font = bold
+            ws[cell].alignment = center
+            ws[cell].border = border
+
+        for row in range(10, 20):
+            for col in 'ABCDEFGHIJK':
+                ws[f'{col}{row}'].border = border
+
+        # Временные параметры (строка 22 заголовки, 23 значения)
+        time_labels = {
+            'A22': 'Время включения циркуляции',
+            'D22': 'Время включения нагрева',
+            'G22': 'Время отбора пробы на вязкость базовой смеси',
+            'J22': 'Время отбора пробы на готовность',
+        }
+        for cell, text in time_labels.items():
+            ws[cell] = text
+            ws[cell].font = bold
+            ws[cell].alignment = center
+
+        # Результаты испытаний (строка 30 заголовки, 31 значения)
+        test_labels = {
+            'B30': 'Квн 100 (норма)', 'C30': 'Квн 100 (факт)',
+            'E30': 'Квн 40 (норма)', 'F30': 'Квн 40 (факт)',
+            'H30': 'ИВ (норма)', 'I30': 'ИВ (факт)',
+            'K30': 'ССS (норма)', 'L30': 'ССS (факт)',
+        }
+        for cell, text in test_labels.items():
+            ws[cell] = text
+            ws[cell].font = bold
+            ws[cell].alignment = center
+
+        # Подписи
+        ws['A34'] = 'Соответствие нормам:'
+        ws['I34'] = 'Подпись лаборанта:'
+        ws['F36'] = 'Аппаратчик:'
+        ws['H36'] = 'Дата:'
+        for cell in ('A34', 'I34', 'F36', 'H36'):
+            ws[cell].font = bold
+
+        # Ширина колонок для читаемости
+        widths = {'A': 28, 'B': 12, 'C': 12, 'D': 12, 'E': 12, 'F': 14,
+                  'G': 10, 'H': 12, 'I': 12, 'J': 14, 'K': 14, 'L': 12}
+        for col, width in widths.items():
+            ws.column_dimensions[col].width = width
+
+        return wb, ws
 
     def fill_basic_info(self, data):
         """Заполнить базовую информацию"""

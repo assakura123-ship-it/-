@@ -1756,6 +1756,9 @@ class LoadingCardTab(Frame):
             db_manager.update_card_total_mass(self.card_id, total_mass)
 
             # Добавляем компоненты
+            warehouse_codes = {w['component_code'] for w in db_manager.get_warehouse_items()}
+            missing_warehouse_components = []
+
             for item in self.editable_data:
                 db_manager.add_card_component(
                     card_id=self.card_id,
@@ -1764,6 +1767,28 @@ class LoadingCardTab(Frame):
                     percentage=item['percentage'],
                     calculated_mass=item.get('mass', 0.0)
                 )
+
+                # Списание компонента со склада (расход материалов)
+                component_mass = item.get('mass', 0.0)
+                if item['component_code'] in warehouse_codes and component_mass:
+                    db_manager.update_warehouse_stock(item['component_code'], -component_mass)
+                    self.logger.info(
+                        f"Списано со склада: {item['component_code']} - {component_mass:.3f} кг")
+                elif component_mass:
+                    missing_warehouse_components.append(item['component_code'])
+
+            if missing_warehouse_components:
+                self.logger.warning(
+                    "Компоненты отсутствуют на складе, списание не выполнено: "
+                    + ", ".join(missing_warehouse_components)
+                )
+
+            # Обновляем данные склада в главном окне (если открыта вкладка склада)
+            if self.start_window and hasattr(self.start_window, 'load_warehouse_data'):
+                try:
+                    self.start_window.load_warehouse_data()
+                except Exception as refresh_err:
+                    self.logger.warning(f"Не удалось обновить вкладку склада: {refresh_err}")
 
             end_time = datetime.now()
             duration = (end_time - start_time).total_seconds()
