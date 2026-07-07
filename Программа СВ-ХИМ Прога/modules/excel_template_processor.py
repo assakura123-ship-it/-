@@ -623,13 +623,84 @@ class ExcelTemplateProcessor:
         if self.wb:
             self.wb.save(output_path)
 
-    def create_from_card_data(self, card_data, output_path):
+    def configure_page_setup_for_printing(self):
+        """Настроить параметры страницы активного листа так, чтобы при печати
+        (или при конвертации в PDF, например через LibreOffice) карта
+        помещалась на одну страницу, а не "расползалась" на несколько
+        листов из-за отсутствия заданной области печати.
+        """
+        if not self.ws:
+            return
+
+        ws = self.ws
+        used_range = ws.dimensions  # например 'A1:M37'
+
+        try:
+            ws.print_area = used_range
+        except Exception:
+            pass
+
+        # Ландшафтная ориентация — все три шаблона карт шире, чем выше
+        ws.page_setup.orientation = 'landscape'
+
+        # "Вписать" содержимое ровно в 1 страницу по ширине и высоте
+        ws.page_setup.fitToWidth = 1
+        ws.page_setup.fitToHeight = 1
+        ws.sheet_properties.pageSetUpPr.fitToPage = True
+
+        # Минимальные поля, чтобы было больше места для содержимого
+        try:
+            ws.page_margins.left = 0.2
+            ws.page_margins.right = 0.2
+            ws.page_margins.top = 0.3
+            ws.page_margins.bottom = 0.3
+            ws.page_margins.header = 0.1
+            ws.page_margins.footer = 0.1
+        except Exception:
+            pass
+
+    def save_single_sheet_for_pdf(self, output_path):
+        """Сохранить файл, содержащий ТОЛЬКО текущий (заполненный) лист.
+
+        Исходный файл шаблона содержит все три варианта карты в одном
+        Excel-файле (листы "п. ", "Концентрат", "1цех"). При конвертации
+        такого многолистового файла в PDF (например через LibreOffice
+        headless) в PDF попадут ВСЕ листы книги, а не только тот, который
+        реально был заполнен данными — этого нужно избежать при экспорте
+        конкретной карты загрузки в PDF.
+
+        Метод настраивает область печати активного листа на 1 страницу и
+        удаляет из книги все прочие листы, после чего сохраняет результат
+        в отдельный временный файл, который затем можно безопасно
+        сконвертировать в PDF.
+        """
+        if not self.wb or not self.ws:
+            return False
+
+        self.configure_page_setup_for_printing()
+
+        target_title = self.ws.title
+        for sheet_name in list(self.wb.sheetnames):
+            if sheet_name != target_title:
+                del self.wb[sheet_name]
+
+        self.wb.active = 0
+        self.wb.save(output_path)
+        return True
+
+    def create_from_card_data(self, card_data, output_path, single_sheet_only=False):
         """Создать файл из данных карты.
 
         card_data может содержать ключ 'template_type' ('oil' | 'concentrate'
         | 'workshop1'), который переопределит тип, заданный в конструкторе
         (удобно, когда процессор создаётся один раз, а тип определяется по
         выбранной номенклатурной группе продукта).
+
+        single_sheet_only: если True — итоговый файл будет содержать ТОЛЬКО
+        заполненный лист (остальные листы шаблона будут удалены), а область
+        печати будет настроена на одну страницу. Используется при подготовке
+        файла для конвертации в PDF, чтобы в PDF не попадали лишние
+        (незаполненные) листы шаблона и пустые "хвостовые" страницы.
         """
         try:
             requested_type = card_data.get('template_type')
@@ -668,7 +739,10 @@ class ExcelTemplateProcessor:
             self.fill_signatures(card_data.get('signatures', {}))
 
             # Сохраняем
-            self.save(output_path)
+            if single_sheet_only:
+                self.save_single_sheet_for_pdf(output_path)
+            else:
+                self.save(output_path)
             return True
 
         except Exception as e:
