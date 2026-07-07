@@ -1297,8 +1297,8 @@ class ModernStartWindow:
                     self.cards_tree.insert('', 'end', values=(
                         card['id'],
                         card['card_name'],
-                        card.get('product_name', '')[:20],
-                        card.get('recipe_number', '')[:10],
+                        (card.get('product_name') or '')[:20],
+                        (card.get('recipe_number') or '')[:10],
                         date_str,
                         card.get('status', 'draft')
                     ))
@@ -1824,9 +1824,12 @@ class ModernStartWindow:
                 return
 
             for product in products:
-                display_text = f"{product['product_code']:<15} {product['product_name'][:30]:<30} "
-                display_text += f"{product.get('description', '')[:25]:<25} {product.get('recipe_count', 0):<10} "
-                display_text += f"{product['created_date'][:10]:<12}"
+                product_name = (product.get('product_name') or '')[:30]
+                description = (product.get('description') or '')[:25]
+                created_date = (product.get('created_date') or '')[:10]
+                display_text = f"{product['product_code']:<15} {product_name:<30} "
+                display_text += f"{description:<25} {product.get('recipe_count', 0):<10} "
+                display_text += f"{created_date:<12}"
 
                 if hasattr(self, 'products_listbox'):
                     self.products_listbox.insert(END, display_text)

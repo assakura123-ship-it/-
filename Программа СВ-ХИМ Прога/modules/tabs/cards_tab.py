@@ -120,8 +120,10 @@ class CardsTab:
                     # Форматируем строку для списка
                     date_str = card['created_date'][:16] if card['created_date'] else "Неизвестно"
 
-                    display_text = f"{card['id']:<5} {card['card_name']:<30} {card.get('product_name', '')[:15]:<15} "
-                    display_text += f"{card.get('recipe_number', '')[:10]:<10} {card.get('reactor', 'Р-1'):<8} "
+                    product_name = (card.get('product_name') or '')[:15]
+                    recipe_number = (card.get('recipe_number') or '')[:10]
+                    display_text = f"{card['id']:<5} {card['card_name']:<30} {product_name:<15} "
+                    display_text += f"{recipe_number:<10} {card.get('reactor', 'Р-1'):<8} "
                     display_text += f"{date_str:<20} {card.get('status', 'draft'):<10}"
 
                     self.cards_listbox.insert(END, display_text)

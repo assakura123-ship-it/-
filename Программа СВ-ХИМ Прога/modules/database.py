@@ -682,10 +682,42 @@ class DatabaseManager:
         # Затем удаляем саму карту
         self.execute_query('DELETE FROM loading_cards WHERE id = ?', (card_id,))
 
-    def import_from_excel(self, filepath: str):
-        """Импорт данных из Excel файла в базу данных"""
+    @staticmethod
+    def _normalize_excel_value(value) -> str:
+        """Привести значение ячейки Excel (в т.ч. numpy.int64/float64/Timestamp)
+        к нативной Python-строке.
+
+        pandas при чтении Excel возвращает числовые колонки как numpy-типы
+        (numpy.int64, numpy.float64). sqlite3 не умеет корректно
+        сериализовать numpy-типы через параметризованные запросы — вместо
+        текста получается повреждённый BLOB (см. баг с product_code).
+        Поэтому все значения, которые идут в TEXT-колонки, нормализуем
+        в обычный Python str.
+        """
+        if value is None:
+            return ''
+        if pd.isna(value):
+            return ''
+        # numpy числовые типы имеют метод .item(), который возвращает
+        # эквивалентный нативный Python-тип (int/float)
+        if hasattr(value, 'item'):
+            value = value.item()
+        # Целые float вида 11121115.0 приводим к виду "11121115" (без .0),
+        # т.к. коды продуктов/компонентов в Excel часто хранятся как float
+        if isinstance(value, float) and value.is_integer():
+            return str(int(value))
+        return str(value).strip()
+
+    def import_from_excel(self, filepath: str, replace_existing: bool = False):
+        """Импорт данных из Excel файла в базу данных
+
+        Args:
+            filepath (str): Путь к Excel файлу
+            replace_existing (bool): Если True, существующие рецептуры (по коду продукта
+                и номеру РЦ) будут удалены перед импортом новых данных
+        """
         try:
-            self.logger.info(f"Импорт данных из Excel файла: {filepath}")
+            self.logger.info(f"Импорт данных из Excel файла: {filepath} (replace_existing={replace_existing})")
 
             # Чтение Excel файла
             df = pd.read_excel(filepath)
@@ -716,12 +748,30 @@ class DatabaseManager:
                 grouped = df.groupby(['Код продукта', 'Номер РЦ'])
 
                 for (product_code, recipe_number), group in grouped:
+                    # Приводим ключи группировки к нативным Python-типам (str),
+                    # иначе pandas/numpy может вернуть numpy.int64, который
+                    # sqlite3 сохраняет как повреждённый BLOB вместо текста
+                    product_code = self._normalize_excel_value(product_code)
+                    recipe_number = self._normalize_excel_value(recipe_number)
+
                     # Добавляем продукт
-                    product_name = group.iloc[0].get('Наименование', product_code)
+                    product_name = self._normalize_excel_value(
+                        group.iloc[0].get('Наименование', product_code))
                     self.execute_query('''
                         INSERT OR IGNORE INTO products (product_code, product_name)
                         VALUES (?, ?)
                     ''', (product_code, product_name))
+
+                    # Если требуется замена существующих данных - удаляем старую рецептуру
+                    if replace_existing:
+                        existing_recipe = self.get_recipe_by_number(product_code, recipe_number)
+                        if existing_recipe:
+                            self.execute_query(
+                                'DELETE FROM recipe_components WHERE recipe_id = ?',
+                                (existing_recipe['id'],)
+                            )
+                            self.logger.debug(
+                                f"Удалены старые компоненты рецептуры {recipe_number} продукта {product_code}")
 
                     # Добавляем рецептуру
                     self.execute_query('''
@@ -736,8 +786,8 @@ class DatabaseManager:
 
                         # Добавляем компоненты
                         for _, row in group.iterrows():
-                            component_code = row.get('Код компонента', '')
-                            component_name = row.get('Компонент', '')
+                            component_code = self._normalize_excel_value(row.get('Код компонента', ''))
+                            component_name = self._normalize_excel_value(row.get('Компонент', ''))
                             percentage_value = row.get('Процент', 0.0)
 
                             # Преобразуем процент в число
@@ -856,13 +906,15 @@ class DatabaseManager:
         ''', (quantity_change, component_code))
 
     def add_warehouse_item(self, component_code: str, component_name: str,
-                           current_stock: float = 0.0, location: str = ""):
+                           current_stock: float = 0.0, unit: str = "кг",
+                           location: str = "", min_stock: float = 0.0,
+                           max_stock: float = 1000.0):
         """Добавление новой позиции на склад"""
         self.execute_query('''
             INSERT OR REPLACE INTO warehouse 
-            (component_code, component_name, current_stock, location)
-            VALUES (?, ?, ?, ?)
-        ''', (component_code, component_name, current_stock, location))
+            (component_code, component_name, current_stock, unit, location, min_stock, max_stock)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (component_code, component_name, current_stock, unit, location, min_stock, max_stock))
 
     def import_warehouse_from_excel(self, filepath: str) -> bool:
         """Импорт данных склада из Excel файла"""
@@ -975,6 +1027,7 @@ class DatabaseManager:
                         component_code=component_code,
                         component_name=component_name,
                         current_stock=current_stock,
+                        unit=unit,
                         location=location
                     )
 
@@ -999,83 +1052,85 @@ class DatabaseManager:
             self.logger.error(f"Ошибка импорта склада из Excel: {e}")
             return False
 
+    def get_norms_count(self) -> int:
+        """Получить общее количество норм в базе (алиас для get_total_norms_count)"""
+        return self.get_total_norms_count()
 
-def get_product_by_id(self, product_id):
-    """
-    Получить продукт по ID
+    def get_product_by_id(self, product_id):
+        """
+        Получить продукт по ID
 
-    Args:
-        product_id (int): ID продукта
+        Args:
+            product_id (int): ID продукта
 
-    Returns:
-        dict: Данные продукта или None если не найден
-    """
-    try:
-        result = self.execute_query('SELECT * FROM products WHERE id = ?', (product_id,))
-        return result[0] if result else None
+        Returns:
+            dict: Данные продукта или None если не найден
+        """
+        try:
+            result = self.execute_query('SELECT * FROM products WHERE id = ?', (product_id,))
+            return result[0] if result else None
 
-    except Exception as e:
-        self.logger.error(f"Ошибка получения продукта по ID {product_id}: {e}")
-        return None
+        except Exception as e:
+            self.logger.error(f"Ошибка получения продукта по ID {product_id}: {e}")
+            return None
 
+    def get_product_recipes(self, product_id):
+        """
+        Получить рецептуры для продукта по его ID
 
-def get_product_recipes(self, product_id):
-    """
-    Получить рецептуры для продукта по его ID
+        Args:
+            product_id (int): ID продукта
 
-    Args:
-        product_id (int): ID продукта
+        Returns:
+            list: Список рецептур в виде словарей
+        """
+        try:
+            self.logger.debug(f"Вызов get_product_recipes с product_id={product_id}")
 
-    Returns:
-        list: Список рецептур в виде словарей
-    """
-    try:
-        self.logger.debug(f"Вызов get_product_recipes с product_id={product_id}")
+            # Получаем продукт по ID, чтобы узнать его код
+            product = self.get_product_by_id(product_id)
+            if not product:
+                self.logger.warning(f"Продукт с ID={product_id} не найден")
+                return []
 
-        # Получаем продукт по ID, чтобы узнать его код
-        product = self.get_product_by_id(product_id)
-        if not product:
-            self.logger.warning(f"Продукт с ID={product_id} не найден")
+            product_code = product.get('product_code')
+            if not product_code:
+                self.logger.warning(f"У продукта с ID={product_id} нет кода")
+                return []
+
+            # Используем существующий метод get_recipes_for_product
+            return self.get_recipes_for_product(product_code)
+
+        except Exception as e:
+            self.logger.error(f"Ошибка в get_product_recipes для product_id={product_id}: {e}")
             return []
 
-        product_code = product.get('product_code')
-        if not product_code:
-            self.logger.warning(f"У продукта с ID={product_id} нет кода")
+    def get_recipe_components_by_codes(self, product_code: str, recipe_number: str) -> List[Dict[str, Any]]:
+        """
+        Получить компоненты рецептуры по коду продукта и номеру рецептуры
+
+        Args:
+            product_code (str): Код продукта
+            recipe_number (str): Номер рецептуры
+
+        Returns:
+            list: Список компонентов рецептуры
+        """
+        try:
+            # Сначала находим рецептуру
+            recipe = self.get_recipe_by_number(product_code, recipe_number)
+            if not recipe:
+                self.logger.warning(f"Рецептура {recipe_number} для продукта {product_code} не найдена")
+                return []
+
+            # Получаем компоненты этой рецептуры
+            recipe_id = recipe['id']
+            return self.get_recipe_components(recipe_id)
+
+        except Exception as e:
+            self.logger.error(f"Ошибка получения компонентов рецептуры {recipe_number} для продукта {product_code}: {e}")
             return []
 
-        # Используем существующий метод get_recipes_for_product
-        return self.get_recipes_for_product(product_code)
-
-    except Exception as e:
-        self.logger.error(f"Ошибка в get_product_recipes для product_id={product_id}: {e}")
-        return []
-
-
-def get_recipe_components_by_codes(self, product_code: str, recipe_number: str) -> List[Dict[str, Any]]:
-    """
-    Получить компоненты рецептуры по коду продукта и номеру рецептуры
-
-    Args:
-        product_code (str): Код продукта
-        recipe_number (str): Номер рецептуры
-
-    Returns:
-        list: Список компонентов рецептуры
-    """
-    try:
-        # Сначала находим рецептуру
-        recipe = self.get_recipe_by_number(product_code, recipe_number)
-        if not recipe:
-            self.logger.warning(f"Рецептура {recipe_number} для продукта {product_code} не найдена")
-            return []
-
-        # Получаем компоненты этой рецептуры
-        recipe_id = recipe['id']
-        return self.get_recipe_components(recipe_id)
-
-    except Exception as e:
-        self.logger.error(f"Ошибка получения компонентов рецептуры {recipe_number} для продукта {product_code}: {e}")
-        return []
 
 # Глобальный экземпляр менеджера базы данных
 db_manager = DatabaseManager()
