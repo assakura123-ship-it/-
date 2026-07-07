@@ -6,6 +6,8 @@ from datetime import datetime
 import os
 import tempfile
 import shutil
+import subprocess
+import platform
 from modules.logger import system_logger, log_operation, LogLevel
 from modules.database import db_manager
 from modules.excel_template_processor import ExcelTemplateProcessor
@@ -1077,23 +1079,33 @@ class LoadingCardTab(Frame):
                             'end_time': ''
                         })
 
-                    # Создаем временный Excel
+                    # Создаем временный Excel, содержащий ТОЛЬКО заполненный лист
+                    # (остальные листы шаблона удаляются, область печати
+                    # настраивается на 1 страницу) — это нужно, чтобы при
+                    # конвертации в PDF не появлялись лишние пустые/чужие
+                    # страницы.
                     processor = ExcelTemplateProcessor(template_type=selected_template_type)
-                    success = processor.create_from_card_data(card_data, temp_excel)
+                    success = processor.create_from_card_data(card_data, temp_excel, single_sheet_only=True)
 
                     if not success:
                         messagebox.showerror("Ошибка", "Не удалось создать временный Excel файл")
                         return
 
-                    # Пытаемся конвертировать в PDF
-                    if self.convert_excel_to_pdf_win32(temp_excel, filename):
+                    # Пытаемся конвертировать в PDF (кроссплатформенно, через
+                    # LibreOffice headless; на Windows с установленным Excel
+                    # используется резервный способ через win32com)
+                    pdf_ok, pdf_error = self.convert_excel_to_pdf(temp_excel, filename)
+
+                    if pdf_ok:
                         messagebox.showinfo("Успех", f"PDF файл сохранен:\n{filename}")
                         self.logger.info(f"Создан PDF файл: {filename}")
                         filler_dialog.destroy()
                     else:
                         # Если не удалось конвертировать, предлагаем сохранить Excel
+                        self.logger.error(f"Не удалось создать PDF: {pdf_error}")
                         if messagebox.askyesno("Внимание",
-                                               "Не удалось создать PDF. Сохранить как Excel файл?"):
+                                               f"Не удалось создать PDF ({pdf_error}).\n"
+                                               "Сохранить как Excel файл?"):
                             excel_filename = filename.replace('.pdf', '.xlsx')
                             shutil.copy2(temp_excel, excel_filename)
                             messagebox.showinfo("Успех", f"Excel файл сохранен:\n{excel_filename}")
@@ -1130,8 +1142,129 @@ class LoadingCardTab(Frame):
             self.logger.error(f"Ошибка открытия диалога заполнения шаблона: {e}")
             messagebox.showerror("Ошибка", f"Не удалось открыть форму заполнения: {str(e)}")
 
-    def convert_excel_to_pdf_win32(self, excel_path, pdf_path):
-        """Конвертация Excel в PDF с использованием win32com (Windows)"""
+    def convert_excel_to_pdf(self, excel_path, pdf_path):
+        """Кроссплатформенная конвертация Excel -> PDF.
+
+        Возвращает кортеж (успех: bool, сообщение_об_ошибке: str | None).
+
+        Порядок попыток:
+          1. LibreOffice headless (soffice --headless --convert-to pdf) —
+             работает на Linux/macOS/Windows, если установлен LibreOffice.
+             Это ОСНОВНОЙ способ, так как не требует наличия Microsoft
+             Excel и работает предсказуемо в любой среде (в т.ч. на
+             серверах без графической оболочки).
+          2. win32com.client (Microsoft Excel через COM) — работает только
+             на Windows с установленным Excel. Используется как резервный
+             вариант, если LibreOffice недоступен.
+        """
+        last_error = None
+
+        ok, err = self._convert_excel_to_pdf_libreoffice(excel_path, pdf_path)
+        if ok:
+            return True, None
+        last_error = err
+
+        ok, err = self._convert_excel_to_pdf_win32(excel_path, pdf_path)
+        if ok:
+            return True, None
+        if err:
+            last_error = f"{last_error}; {err}" if last_error else err
+
+        return False, last_error or "неизвестная ошибка конвертации"
+
+    def _find_libreoffice_binary(self):
+        """Найти исполняемый файл LibreOffice/soffice в системе."""
+        candidates = ['soffice', 'libreoffice']
+        if platform.system() == 'Windows':
+            candidates = [
+                r"C:\Program Files\LibreOffice\program\soffice.exe",
+                r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+                'soffice.exe',
+                'soffice',
+            ]
+
+        for candidate in candidates:
+            path = shutil.which(candidate)
+            if path:
+                return path
+            if os.path.isabs(candidate) and os.path.exists(candidate):
+                return candidate
+
+        return None
+
+    def _convert_excel_to_pdf_libreoffice(self, excel_path, pdf_path):
+        """Конвертация Excel в PDF через LibreOffice headless (кроссплатформенно).
+
+        LibreOffice сохраняет результат в выходной директории под именем,
+        совпадающим с именем исходного файла (только расширение .pdf),
+        поэтому после конвертации файл переименовывается/перемещается в
+        запрошенный пользователем путь pdf_path.
+        """
+        soffice_bin = self._find_libreoffice_binary()
+        if not soffice_bin:
+            return False, "LibreOffice (soffice) не найден в системе"
+
+        tmp_outdir = tempfile.mkdtemp(prefix="svhim_pdf_")
+        try:
+            # Используем отдельный профиль LibreOffice во временной папке,
+            # чтобы избежать конфликтов при параллельных/повторных запусках
+            # (иначе soffice иногда падает с ошибкой "another instance").
+            profile_dir = tempfile.mkdtemp(prefix="svhim_lo_profile_")
+            user_installation = f"-env:UserInstallation=file://{profile_dir}"
+
+            cmd = [
+                soffice_bin,
+                "--headless",
+                "--norestore",
+                user_installation,
+                "--convert-to", "pdf",
+                "--outdir", tmp_outdir,
+                os.path.abspath(excel_path),
+            ]
+
+            result = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=60,
+            )
+
+            base_name = os.path.splitext(os.path.basename(excel_path))[0]
+            generated_pdf = os.path.join(tmp_outdir, base_name + ".pdf")
+
+            if result.returncode != 0 or not os.path.exists(generated_pdf):
+                stderr_text = (result.stderr or b"").decode("utf-8", errors="ignore")
+                self.logger.error(f"Ошибка конвертации LibreOffice: {stderr_text}")
+                return False, "ошибка LibreOffice при конвертации в PDF"
+
+            # Перемещаем сгенерированный PDF в целевой путь
+            os.makedirs(os.path.dirname(os.path.abspath(pdf_path)) or ".", exist_ok=True)
+            shutil.move(generated_pdf, pdf_path)
+            return True, None
+
+        except FileNotFoundError:
+            return False, "LibreOffice (soffice) не найден в системе"
+        except subprocess.TimeoutExpired:
+            return False, "превышено время ожидания конвертации LibreOffice"
+        except Exception as e:
+            self.logger.error(f"Ошибка LibreOffice конвертации: {e}")
+            return False, str(e)
+        finally:
+            try:
+                shutil.rmtree(tmp_outdir, ignore_errors=True)
+            except Exception:
+                pass
+            try:
+                shutil.rmtree(profile_dir, ignore_errors=True)
+            except Exception:
+                pass
+
+    def _convert_excel_to_pdf_win32(self, excel_path, pdf_path):
+        """Конвертация Excel в PDF с использованием win32com (только Windows,
+        требует установленный Microsoft Excel). Резервный способ."""
+        if platform.system() != 'Windows':
+            return False, None
+
         try:
             import win32com.client
             excel = win32com.client.Dispatch("Excel.Application")
@@ -1147,10 +1280,21 @@ class LoadingCardTab(Frame):
             workbook.Close(SaveChanges=False)
             excel.Quit()
 
-            return True
+            return True, None
         except Exception as e:
             self.logger.error(f"Ошибка win32com конвертации: {e}")
-            return False
+            return False, str(e)
+
+    def convert_excel_to_pdf_win32(self, excel_path, pdf_path):
+        """Совместимость со старым API: конвертация Excel в PDF.
+
+        Ранее этот метод пытался использовать ТОЛЬКО win32com (работал
+        исключительно на Windows с установленным Excel). Теперь делегирует
+        кроссплатформенному методу convert_excel_to_pdf, который в первую
+        очередь использует LibreOffice headless.
+        """
+        ok, _ = self.convert_excel_to_pdf(excel_path, pdf_path)
+        return ok
 
     def close_tab(self):
         """Закрыть текущую вкладку"""
