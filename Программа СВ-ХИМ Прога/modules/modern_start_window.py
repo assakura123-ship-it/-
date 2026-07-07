@@ -991,6 +991,56 @@ class ModernStartWindow:
             self.logger.error(f"Ошибка создания вкладки логов: {e}")
             raise
 
+    def _make_scrollable(self, parent):
+        """Оборачивает содержимое вкладки в Canvas+Scrollbar, чтобы контент
+        не обрезался, если не помещается по высоте окна (как на вкладке
+        "Главная"). Возвращает Frame, в который нужно класть содержимое.
+        Дополнительно навешивает прокрутку колесом мыши на весь canvas."""
+        canvas = tk.Canvas(parent, bg=self.colors['background'], highlightthickness=0)
+        scrollbar = Scrollbar(parent, orient='vertical', command=canvas.yview)
+        scrollable_frame = Frame(canvas, bg=self.colors['background'])
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Растягиваем внутренний frame по ширине канваса
+        def _resize_inner(event):
+            canvas.itemconfig(canvas_window, width=event.width)
+        canvas.bind("<Configure>", _resize_inner)
+
+        canvas.pack(side='left', fill='both', expand=True)
+        scrollbar.pack(side='right', fill='y')
+
+        def _on_mousewheel(event):
+            delta = 0
+            if getattr(event, 'num', None) == 4:
+                delta = -1
+            elif getattr(event, 'num', None) == 5:
+                delta = 1
+            elif getattr(event, 'delta', 0):
+                delta = -1 if event.delta > 0 else 1
+            canvas.yview_scroll(delta, "units")
+
+        def _bind_wheel(_event=None):
+            canvas.bind_all("<MouseWheel>", _on_mousewheel)
+            canvas.bind_all("<Button-4>", _on_mousewheel)
+            canvas.bind_all("<Button-5>", _on_mousewheel)
+
+        def _unbind_wheel(_event=None):
+            canvas.unbind_all("<MouseWheel>")
+            canvas.unbind_all("<Button-4>")
+            canvas.unbind_all("<Button-5>")
+
+        canvas.bind("<Enter>", _bind_wheel)
+        canvas.bind("<Leave>", _unbind_wheel)
+
+        return scrollable_frame
+
     def create_import_export_tab(self):
         """Создание вкладки импорта/экспорта в современном стиле"""
         try:
@@ -1006,8 +1056,14 @@ class ModernStartWindow:
             norms_tab = Frame(main_notebook, bg=self.colors['background'])
             main_notebook.add(norms_tab, text="📊 Нормы показателей")
 
-            self.create_import_export_content(recipes_tab, is_norms=False)
-            self.create_import_export_content(norms_tab, is_norms=True)
+            # Контент оборачиваем в прокручиваемую область, т.к. на маленьких
+            # экранах/окнах кнопки "Начать импорт/экспорт" не помещались по
+            # высоте и были недоступны (баг: кнопка "исчезает" после выбора файла)
+            recipes_scrollable = self._make_scrollable(recipes_tab)
+            norms_scrollable = self._make_scrollable(norms_tab)
+
+            self.create_import_export_content(recipes_scrollable, is_norms=False)
+            self.create_import_export_content(norms_scrollable, is_norms=True)
 
             self.logger.debug("Вкладка 'Импорт/Экспорт' создана успешно")
 
