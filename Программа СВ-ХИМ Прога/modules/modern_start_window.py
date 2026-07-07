@@ -13,6 +13,7 @@ import pandas as pd
 
 from modules.logger import system_logger, LogLevel
 from modules.database import db_manager
+from modules.ui_theme import COLORS, FONTS
 
 
 class ToolTip:
@@ -79,45 +80,19 @@ class ModernStartWindow:
         self.root.title("Управление Производством MOZER")
         self.root.geometry("1400x900")
 
-        # Современная цветовая палитра
-        self.colors = {
-            'primary': '#0078D4',  # Основной синий
-            'primary_light': '#E6F2FA',
-            'secondary': '#605E5C',  # Нейтральный серый
-            'success': '#107C10',  # Зеленый успеха
-            'warning': '#F2C811',  # Желтый предупреждения
-            'danger': '#D13438',  # Красный ошибки
-            'background': '#FAFAFA',  # Фон приложения
-            'surface': '#FFFFFF',  # Поверхности/карточки
-            'on_surface': '#323130',  # Текст на поверхностях
-            'on_background': '#323130',  # Текст на фоне
-            'border': '#E1E1E1',  # Границы
-            'hover': '#F3F3F3',  # Ховер-эффект
-            'tab_selected': '#0078D4',  # Выбранная вкладка
-            'tab_unselected': '#8A8886'  # Невыбранная вкладка
-        }
+        # Современная минималистичная цветовая палитра (см. modules/ui_theme.py)
+        self.colors = COLORS
+        self.fonts = FONTS
 
-        self.fonts = {
-            'h1': ('Segoe UI', 24, 'bold'),
-            'h2': ('Segoe UI', 20, 'bold'),
-            'h3': ('Segoe UI', 16, 'bold'),
-            'body': ('Segoe UI', 11),
-            'body_semibold': ('Segoe UI', 11, 'bold'),
-            'caption': ('Segoe UI', 10),
-            'small': ('Segoe UI', 9)
-        }
-
-        # Настройка темы
+        # Тема 'clam' даёт полный контроль над отрисовкой ttk-виджетов
+        # (в отличие от 'vista', который игнорирует часть style.configure на Windows)
         self.root.configure(bg=self.colors['background'])
         self.style = ttk.Style()
 
         try:
-            self.style.theme_use('vista')
+            self.style.theme_use('clam')
         except Exception:
-            try:
-                self.style.theme_use('clam')
-            except Exception:
-                pass
+            pass
 
         # Настройка стилей
         self.configure_styles()
@@ -142,12 +117,12 @@ class ModernStartWindow:
     # ===================== НАСТРОЙКА СТИЛЕЙ =====================
 
     def configure_styles(self):
-        """Настройка современных стилей для виджетов"""
+        """Настройка стилей в духе современного минимализма."""
         style = self.style
         colors = self.colors
         fonts = self.fonts
 
-        # Общий фон
+        # Общий фон / текст по умолчанию для всех ttk-виджетов
         style.configure(
             ".",
             background=colors['background'],
@@ -155,174 +130,187 @@ class ModernStartWindow:
             font=fonts['body']
         )
 
-        # Notebook
+        # ===== Notebook (вкладки) =====
         style.configure(
             "TNotebook",
             background=colors['background'],
-            borderwidth=0
+            borderwidth=0,
+            tabmargins=[0, 6, 0, 0]
         )
-        # Вкладки
         style.configure(
             "TNotebook.Tab",
-            padding=[10, 4],
-            font=('Segoe UI', 9, 'bold'),
-            background=colors['surface'],
-            foreground=colors['on_surface']
+            padding=[16, 9],
+            font=fonts['body_semibold'],
+            background=colors['background'],
+            foreground=colors['tab_unselected'],
+            borderwidth=0,
+            focuscolor=colors['background']
         )
         style.map(
             "TNotebook.Tab",
             background=[
-                ("selected", colors['primary_light']),
-                ("active", colors['hover'])
+                ("selected", colors['background']),
+                ("active", colors['background'])
             ],
             foreground=[
-                ("selected", colors['on_surface']),
-                ("active", colors['on_surface'])
+                ("selected", colors['tab_selected']),
+                ("active", colors['primary'])
             ]
         )
 
-        # Основная кнопка
-        style.configure(
-            "Modern.TButton",
-            padding=[16, 10],
-            font=fonts['body_semibold'],
-            borderwidth=0,
-            relief="flat",
-            background=colors['primary'],
-            foreground="#FFFFFF"
-        )
-        style.map(
-            "Modern.TButton",
-            background=[("active", "#106EBE"), ("pressed", "#005A9E")]
-        )
+        # ===== Кнопки =====
+        def _configure_button(style_name, bg, fg, hover, pressed):
+            style.configure(
+                style_name,
+                padding=[16, 10],
+                font=fonts['body_semibold'],
+                borderwidth=0,
+                relief="flat",
+                background=bg,
+                foreground=fg,
+                focuscolor=bg
+            )
+            style.map(
+                style_name,
+                background=[("active", hover), ("pressed", pressed), ("disabled", colors['border'])],
+                foreground=[("disabled", colors['text_muted'])]
+            )
 
-        # Вторичная кнопка
+        _configure_button("Modern.TButton", colors['primary'], colors['text_on_accent'],
+                           colors['primary_hover'], colors['primary_pressed'])
+        _configure_button("Success.TButton", colors['success'], colors['text_on_accent'],
+                           colors['success_hover'], colors['success_pressed'])
+        _configure_button("Danger.TButton", colors['danger'], colors['text_on_accent'],
+                           colors['danger_hover'], colors['danger_pressed'])
+        _configure_button("Warning.TButton", colors['warning'], colors['text_on_accent'],
+                           colors['warning_hover'], colors['warning_pressed'])
+
+        # Вторичная кнопка — контурная, на фоне поверхности
         style.configure(
             "Secondary.TButton",
             padding=[16, 10],
             font=fonts['body_semibold'],
-            borderwidth=0,
+            borderwidth=1,
             relief="flat",
             background=colors['surface'],
-            foreground=colors['on_surface']
+            foreground=colors['on_surface'],
+            bordercolor=colors['border_strong'],
+            focuscolor=colors['surface']
         )
         style.map(
             "Secondary.TButton",
-            background=[("active", colors['hover']), ("pressed", "#E0E0E0")]
+            background=[("active", colors['hover']), ("pressed", colors['border'])],
+            bordercolor=[("active", colors['primary'])]
         )
 
-        # Success-кнопка
-        style.configure(
-            "Success.TButton",
-            padding=[16, 10],
-            font=fonts['body_semibold'],
-            borderwidth=0,
-            relief="flat",
-            background=colors['success'],
-            foreground="#FFFFFF"
-        )
-        style.map(
-            "Success.TButton",
-            background=[("active", "#0C6B0C"), ("pressed", "#0A5C0A")]
-        )
-
-        # Danger-кнопка
-        style.configure(
-            "Danger.TButton",
-            padding=[16, 10],
-            font=fonts['body_semibold'],
-            borderwidth=0,
-            relief="flat",
-            background=colors['danger'],
-            foreground="#FFFFFF"
-        )
-        style.map(
-            "Danger.TButton",
-            background=[("active", "#C32E32"), ("pressed", "#A5282B")]
-        )
-
-        # Warning-кнопка
-        style.configure(
-            "Warning.TButton",
-            padding=[16, 10],
-            font=fonts['body_semibold'],
-            borderwidth=0,
-            relief="flat",
-            background=colors['warning'],
-            foreground=colors['on_surface']
-        )
-        style.map(
-            "Warning.TButton",
-            background=[("active", "#E0B310"), ("pressed", "#CFA50F")]
-        )
-
-        # Компактная кнопка (для панелей инструментов)
+        # Компактная кнопка (панели инструментов / тулбары)
         style.configure(
             "Compact.TButton",
-            padding=[6, 2],
-            font=('Segoe UI', 8),
+            padding=[8, 4],
+            font=fonts['caption'],
             borderwidth=0,
             relief="flat",
             background=colors['surface'],
-            foreground=colors['on_surface']
+            foreground=colors['on_surface'],
+            focuscolor=colors['surface']
         )
         style.map(
             "Compact.TButton",
-            background=[("active", colors['hover']), ("pressed", "#E0E0E0")]
+            background=[("active", colors['hover']), ("pressed", colors['border'])]
         )
 
-        # Обычное поле ввода
+        # ===== Поля ввода =====
         style.configure(
             "Modern.TEntry",
-            padding=[8, 6],
+            padding=[10, 8],
             relief="flat",
+            borderwidth=1,
             bordercolor=colors['border'],
-            fieldbackground="#FFFFFF"
+            lightcolor=colors['border'],
+            darkcolor=colors['border'],
+            fieldbackground=colors['surface'],
+            insertcolor=colors['on_surface']
+        )
+        style.map(
+            "Modern.TEntry",
+            bordercolor=[("focus", colors['primary'])],
+            lightcolor=[("focus", colors['primary'])],
+            darkcolor=[("focus", colors['primary'])]
         )
 
-        # Компактное поле ввода (для поиска)
         style.configure(
             "Compact.TEntry",
-            padding=[4, 2],
+            padding=[6, 4],
             relief="flat",
+            borderwidth=1,
             bordercolor=colors['border'],
-            fieldbackground="#FFFFFF",
-            font=('Segoe UI', 9)
+            lightcolor=colors['border'],
+            darkcolor=colors['border'],
+            fieldbackground=colors['surface'],
+            font=fonts['caption']
+        )
+        style.map(
+            "Compact.TEntry",
+            bordercolor=[("focus", colors['primary'])],
+            lightcolor=[("focus", colors['primary'])],
+            darkcolor=[("focus", colors['primary'])]
         )
 
-        # Combobox
+        # ===== Combobox =====
         style.configure(
             "Modern.TCombobox",
-            padding=[8, 6],
+            padding=[10, 8],
             relief="flat",
-            fieldbackground="#FFFFFF",
-            borderwidth=1
+            borderwidth=1,
+            bordercolor=colors['border'],
+            lightcolor=colors['border'],
+            darkcolor=colors['border'],
+            fieldbackground=colors['surface'],
+            background=colors['surface'],
+            arrowcolor=colors['secondary']
         )
         style.map(
             "Modern.TCombobox",
-            fieldbackground=[("readonly", "#FFFFFF")]
+            fieldbackground=[("readonly", colors['surface'])],
+            bordercolor=[("focus", colors['primary'])]
+        )
+        style.configure(
+            "TCombobox",
+            padding=[8, 6],
+            relief="flat",
+            borderwidth=1,
+            bordercolor=colors['border'],
+            fieldbackground=colors['surface'],
+            arrowcolor=colors['secondary']
+        )
+        style.map(
+            "TCombobox",
+            fieldbackground=[("readonly", colors['surface'])],
+            bordercolor=[("focus", colors['primary'])]
         )
 
-        # Checkbutton / Radiobutton
+        # ===== Checkbutton / Radiobutton =====
         style.configure("Modern.TCheckbutton",
                         font=fonts['body'],
-                        background=colors['surface'])
+                        background=colors['surface'],
+                        foreground=colors['on_surface'])
         style.configure("Modern.TRadiobutton",
                         font=fonts['body'],
-                        background=colors['surface'])
+                        background=colors['surface'],
+                        foreground=colors['on_surface'])
 
-        # Treeview (таблицы)
+        # ===== Treeview (таблицы) =====
         style.configure(
             "Treeview",
             background=colors['surface'],
             foreground=colors['on_surface'],
-            rowheight=26,
+            rowheight=30,
             fieldbackground=colors['surface'],
-            borderwidth=1,
-            relief="solid",
+            borderwidth=0,
+            relief="flat",
             font=fonts['body']
         )
-        # Чёткая рамка вокруг области таблицы
+        # Без разделительной рамки внутри поля — рамку рисует внешний контейнер-карточка
         style.layout("Treeview", [
             ('Treeview.field', {'sticky': 'nswe', 'children': [
                 ('Treeview.padding', {'sticky': 'nswe', 'children': [
@@ -333,20 +321,70 @@ class ModernStartWindow:
 
         style.configure(
             "Treeview.Heading",
-            background=colors['hover'],
-            foreground=colors['on_surface'],
-            relief='solid',
+            background=colors['surface_alt'],
+            foreground=colors['text_muted'],
+            relief='flat',
+            borderwidth=0,
+            font=fonts['caption']
+        )
+        style.map(
+            "Treeview.Heading",
+            background=[("active", colors['surface_alt'])]
+        )
+        style.map(
+            "Treeview",
+            background=[('selected', colors['selected_row'])],
+            foreground=[('selected', colors['on_surface'])]
+        )
+
+        # Зебра для строк (применяется через tag_configure("odd"/"even", ...) на самих Treeview)
+        style.configure("Odd.Treeview", background=colors['surface'])
+        style.configure("Even.Treeview", background=colors['row_alt'])
+
+        # ===== Скроллбар (тонкий, минималистичный) =====
+        style.configure(
+            "Vertical.TScrollbar",
+            background=colors['border_strong'],
+            troughcolor=colors['background'],
+            bordercolor=colors['background'],
+            arrowcolor=colors['background'],
+            relief='flat',
+            arrowsize=12,
+            width=10
+        )
+        style.map(
+            "Vertical.TScrollbar",
+            background=[("active", colors['secondary'])]
+        )
+        style.configure(
+            "Horizontal.TScrollbar",
+            background=colors['border_strong'],
+            troughcolor=colors['background'],
+            bordercolor=colors['background'],
+            arrowcolor=colors['background'],
+            relief='flat',
+            arrowsize=12,
+            width=10
+        )
+        style.map(
+            "Horizontal.TScrollbar",
+            background=[("active", colors['secondary'])]
+        )
+
+        # ===== LabelFrame (используется в диалогах заполнения шаблона) =====
+        style.configure(
+            "TLabelframe",
+            background=colors['surface'],
+            bordercolor=colors['border'],
             borderwidth=1,
+            relief='solid'
+        )
+        style.configure(
+            "TLabelframe.Label",
+            background=colors['surface'],
+            foreground=colors['on_surface'],
             font=fonts['body_semibold']
         )
-        style.map("Treeview",
-                  background=[('selected', colors['primary_light'])])
-
-        # Зебра для строк (визуальные границы между строками)
-        style.configure("Odd.Treeview", background=colors['surface'])
-        style.configure("Even.Treeview", background="#F5F5F5")
-
-    # ===================== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ =====================
 
     def center_window(self):
         """Центрировать окно на экране"""
@@ -375,10 +413,10 @@ class ModernStartWindow:
             header_frame = Frame(dialog, bg=header_color, height=52)
             header_frame.pack(fill='x')
             header_frame.pack_propagate(False)
-            Label(header_frame, text=title.upper(),
+            Label(header_frame, text=title,
                   font=self.fonts['h3'],
                   bg=header_color,
-                  fg='white').pack(pady=10)
+                  fg=self.colors['text_on_accent']).pack(pady=10)
 
         main_frame = Frame(dialog, bg=self.colors['background'], padx=20, pady=20)
         main_frame.pack(fill='both', expand=True)
@@ -427,29 +465,49 @@ class ModernStartWindow:
         try:
             self.logger.info("Создание виджетов с современным дизайном")
 
-            # Верхняя панель (без иконки и текста — только статус)
+            # Верхняя панель: минималистичный брендинг слева + статус справа
             header_frame = Frame(self.root,
                                  bg=self.colors['surface'],
-                                 height=40)
+                                 height=52)
             header_frame.pack(fill='x', side='top')
             header_frame.pack_propagate(False)
 
-            # Справа только статус
+            brand_frame = Frame(header_frame, bg=self.colors['surface'])
+            brand_frame.pack(side='left', padx=24)
+
+            # Небольшой акцентный квадрат-логотип + название приложения
+            logo_badge = Frame(brand_frame, bg=self.colors['primary'], width=8, height=24)
+            logo_badge.pack(side='left', pady=14)
+            logo_badge.pack_propagate(False)
+
+            Label(brand_frame,
+                  text="MOZER",
+                  font=('Segoe UI', 14, 'bold'),
+                  bg=self.colors['surface'],
+                  fg=self.colors['on_surface']).pack(side='left', padx=(12, 6))
+
+            Label(brand_frame,
+                  text="Управление производством",
+                  font=self.fonts['caption'],
+                  bg=self.colors['surface'],
+                  fg=self.colors['text_muted']).pack(side='left')
+
+            # Справа статус
             status_frame = Frame(header_frame, bg=self.colors['surface'])
-            status_frame.pack(side='right', padx=20)
+            status_frame.pack(side='right', padx=24)
 
             self.status_label = Label(status_frame,
                                       text="Готов к работе",
                                       font=self.fonts['caption'],
                                       bg=self.colors['surface'],
-                                      fg=self.colors['secondary'])
+                                      fg=self.colors['text_muted'])
             self.status_label.pack(side='right')
 
             separator = Frame(self.root, height=1, bg=self.colors['border'])
             separator.pack(fill='x', side='top')
 
             main_frame = Frame(self.root, bg=self.colors['background'])
-            main_frame.pack(fill='both', expand=True, padx=20, pady=20)
+            main_frame.pack(fill='both', expand=True, padx=24, pady=(16, 20))
 
             self.notebook = ttk.Notebook(main_frame, style="TNotebook")
             self.notebook.pack(fill='both', expand=True)
@@ -475,7 +533,7 @@ class ModernStartWindow:
                                     text="",
                                     font=self.fonts['small'],
                                     bg=self.colors['surface'],
-                                    fg=self.colors['secondary'],
+                                    fg=self.colors['text_muted'],
                                     anchor='w')
             self.date_label.pack(side='left', padx=30)
 
@@ -483,7 +541,7 @@ class ModernStartWindow:
                                   text="Версия 2.0 • SQLite",
                                   font=self.fonts['small'],
                                   bg=self.colors['surface'],
-                                  fg=self.colors['secondary'],
+                                  fg=self.colors['text_muted'],
                                   anchor='e')
             version_label.pack(side='right', padx=30)
 
@@ -971,6 +1029,8 @@ class ModernStartWindow:
             for node in nodes:
                 children_map.setdefault(node['parent_id'], []).append(node)
 
+            row_counter = {'i': 0}
+
             def insert_children(parent_iid, parent_key):
                 for node in children_map.get(parent_key, []):
                     is_folder = node['item_type'] == 'folder'
@@ -979,16 +1039,23 @@ class ModernStartWindow:
                     product_label = node.get('product_code') or ''
                     template_label = template_labels.get(node.get('template_type'), node.get('template_type') or '')
 
+                    row_tag = "even" if row_counter['i'] % 2 == 0 else "odd"
+                    row_counter['i'] += 1
+
                     iid = str(node['id'])
                     self.nomenclature_tree.insert(
                         parent_iid, 'end', iid=iid,
                         text=f"{icon}{node['name']}",
                         values=(type_label, product_label, template_label),
-                        open=(iid in expanded_ids)
+                        open=(iid in expanded_ids),
+                        tags=(row_tag,)
                     )
                     insert_children(iid, node['id'])
 
             insert_children('', None)
+
+            self.nomenclature_tree.tag_configure("odd", background=self.colors['surface'])
+            self.nomenclature_tree.tag_configure("even", background=self.colors['row_alt'])
 
         except Exception as e:
             self.logger.error(f"Ошибка загрузки дерева номенклатуры: {e}")
@@ -1892,9 +1959,10 @@ class ModernStartWindow:
                 self.logger.info("Сохраненные карты не найдены")
                 return
 
-            for card in cards:
+            for idx, card in enumerate(cards):
                 try:
                     date_str = card['created_date'][:16] if card['created_date'] else "Неизвестно"
+                    row_tag = "even" if idx % 2 == 0 else "odd"
 
                     self.cards_tree.insert('', 'end', values=(
                         card['id'],
@@ -1903,10 +1971,13 @@ class ModernStartWindow:
                         (card.get('recipe_number') or '')[:10],
                         date_str,
                         card.get('status', 'draft')
-                    ))
+                    ), tags=(row_tag,))
 
                 except Exception as e:
                     self.logger.warning(f"Ошибка обработки карты {card.get('id')}: {e}")
+
+            self.cards_tree.tag_configure("odd", background=self.colors['surface'])
+            self.cards_tree.tag_configure("even", background=self.colors['row_alt'])
 
             self.status_label.config(text=f"Загружено {len(cards)} карт загрузок")
             self.logger.info(f"Загружено {len(cards)} карт загрузок из БД")
@@ -2145,7 +2216,7 @@ class ModernStartWindow:
 
             # Привязать стили к тегам (зебра)
             self.warehouse_tree.tag_configure("odd", background=self.colors['surface'])
-            self.warehouse_tree.tag_configure("even", background="#F5F5F5")
+            self.warehouse_tree.tag_configure("even", background=self.colors["row_alt"])
 
             self.logger.info(f"Загружено {len(items)} позиций со склада")
 
@@ -2203,7 +2274,7 @@ class ModernStartWindow:
                 )
 
             self.warehouse_tree.tag_configure("odd", background=self.colors['surface'])
-            self.warehouse_tree.tag_configure("even", background="#F5F5F5")
+            self.warehouse_tree.tag_configure("even", background=self.colors["row_alt"])
 
         except Exception as e:
             self.logger.error(f"Ошибка фильтрации склада: {e}")

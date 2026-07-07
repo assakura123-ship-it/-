@@ -9,6 +9,7 @@ import shutil
 from modules.logger import system_logger, log_operation, LogLevel
 from modules.database import db_manager
 from modules.excel_template_processor import ExcelTemplateProcessor
+from modules.ui_theme import COLORS, LEGACY_FONT_FAMILY, shade_color
 
 
 class LoadingCardTab(Frame):
@@ -58,13 +59,13 @@ class LoadingCardTab(Frame):
         """Создание виджетов интерфейса с тремя окнами"""
         try:
             # Главный контейнер с прокруткой
-            main_container = Frame(self, bg='#f5f5f5')
+            main_container = Frame(self, bg=COLORS['background'])
             main_container.pack(fill='both', expand=True)
 
             # Canvas для прокрутки
-            canvas = tk.Canvas(main_container, bg='#f5f5f5', highlightthickness=0)
+            canvas = tk.Canvas(main_container, bg='#F8FAFC', highlightthickness=0)
             scrollbar = Scrollbar(main_container, orient='vertical', command=canvas.yview)
-            scrollable_frame = Frame(canvas, bg='#f5f5f5')
+            scrollable_frame = Frame(canvas, bg='#F8FAFC')
 
             # Настройка прокрутки
             scrollable_frame.bind(
@@ -86,69 +87,69 @@ class LoadingCardTab(Frame):
             canvas.bind_all("<MouseWheel>", _on_mousewheel)
 
             # Заголовок вкладки с кнопкой закрытия
-            header_frame = Frame(scrollable_frame, bg='#2c3e50', height=80)
+            header_frame = Frame(scrollable_frame, bg='#0F172A', height=80)
             header_frame.pack(fill='x', pady=(0, 20))
             header_frame.pack_propagate(False)
 
             # Левая часть: название
-            title_frame = Frame(header_frame, bg='#2c3e50')
+            title_frame = Frame(header_frame, bg='#0F172A')
             title_frame.pack(side='left', fill='both', expand=True)
 
             Label(title_frame, text="📋 РЕДАКТОР КАРТ ЗАГРУЗОК (SQLite)",
-                  font=('Arial', 20, 'bold'), bg='#2c3e50', fg='white').pack(pady=20)
+                  font=('Segoe UI', 20, 'bold'), bg='#0F172A', fg='white').pack(pady=20)
 
             # Правая часть: кнопка закрытия
-            close_frame = Frame(header_frame, bg='#2c3e50')
+            close_frame = Frame(header_frame, bg='#0F172A')
             close_frame.pack(side='right', padx=20)
 
             close_btn = Button(close_frame, text="✕ ЗАКРЫТЬ ВКЛАДКУ",
                                command=self.close_tab,
-                               bg='#e74c3c', fg='white',
-                               font=('Arial', 10, 'bold'),
+                               bg='#DC2626', fg='white',
+                               font=('Segoe UI', 10, 'bold'),
                                padx=10, pady=5,
                                cursor="hand2")
             close_btn.pack(pady=20)
-            close_btn.bind("<Enter>", lambda e: close_btn.config(bg='#c0392b'))
-            close_btn.bind("<Leave>", lambda e: close_btn.config(bg='#e74c3c'))
+            close_btn.bind("<Enter>", lambda e: close_btn.config(bg='#B91C1C'))
+            close_btn.bind("<Leave>", lambda e: close_btn.config(bg='#DC2626'))
 
             # Панель управления
-            control_frame = Frame(scrollable_frame, bg='#f5f5f5')
+            control_frame = Frame(scrollable_frame, bg='#F8FAFC')
             control_frame.pack(fill='x', pady=(0, 20))
 
             # Кнопки загрузки и сохранения
-            btn_frame = Frame(control_frame, bg='#f5f5f5')
+            btn_frame = Frame(control_frame, bg='#F8FAFC')
             btn_frame.pack(side='left')
 
             self.save_card_btn = Button(btn_frame, text="💾 СОХРАНИТЬ КАРТУ В БАЗУ",
                                         command=self.save_loading_card,
-                                        bg='#27ae60', fg='white', font=('Arial', 10, 'bold'),
+                                        bg='#16A34A', fg='white', font=('Segoe UI', 10, 'bold'),
                                         padx=15, pady=8, state='normal', cursor="hand2")
             self.save_card_btn.pack(side='left', padx=5)
 
             Button(btn_frame, text="📊 ЗАПОЛНИТЬ ШАБЛОН",
                    command=self.open_template_filler,
-                   bg='#f39c12', fg='white', font=('Arial', 10, 'bold'),
+                   bg='#D97706', fg='white', font=('Segoe UI', 10, 'bold'),
                    padx=15, pady=8, cursor="hand2").pack(side='left', padx=5)
 
             Button(btn_frame, text="🔄 ОБНОВИТЬ",
                    command=self.refresh_data,
-                   bg='#9b59b6', fg='white', font=('Arial', 10, 'bold'),
+                   bg='#7C3AED', fg='white', font=('Segoe UI', 10, 'bold'),
                    padx=15, pady=8, cursor="hand2").pack(side='left', padx=5)
 
             # Поле для названия карты
-            name_frame = Frame(control_frame, bg='#f5f5f5')
+            name_frame = Frame(control_frame, bg='#F8FAFC')
             name_frame.pack(side='right', padx=20)
 
             Label(name_frame, text="Название карты:",
-                  font=('Arial', 9), bg='#f5f5f5').pack(side='left')
+                  font=('Segoe UI', 9), bg='#F8FAFC').pack(side='left')
 
             Entry(name_frame, textvariable=self.card_name_var,
-                  font=('Arial', 9), width=30).pack(side='left', padx=(5, 0))
+                  font=('Segoe UI', 9), width=30).pack(side='left', padx=(5, 0))
 
             # Индикатор несохраненных изменений
             self.unsaved_label = Label(control_frame, text="",
-                                       font=('Arial', 9, 'bold'),
-                                       bg='#f5f5f5', fg='#e74c3c')
+                                       font=('Segoe UI', 9, 'bold'),
+                                       bg='#F8FAFC', fg='#DC2626')
             self.unsaved_label.pack(side='right', padx=20)
 
             # Панель параметров загрузки
@@ -160,40 +161,40 @@ class LoadingCardTab(Frame):
             inner_params.pack(fill='x')
 
             Label(inner_params, text="ПАРАМЕТРЫ ЗАГРУЗКИ",
-                  font=('Arial', 12, 'bold'), bg='white').pack(anchor='w', pady=(0, 15))
+                  font=('Segoe UI', 12, 'bold'), bg='white').pack(anchor='w', pady=(0, 15))
 
             # Первая строка - выбор продукта
             row1 = Frame(inner_params, bg='white')
             row1.pack(fill='x', pady=(0, 10))
 
-            Label(row1, text="Продукт:", font=('Arial', 10, 'bold'),
+            Label(row1, text="Продукт:", font=('Segoe UI', 10, 'bold'),
                   bg='white', width=12, anchor='w').pack(side='left')
 
             # Поле для отображения выбранного продукта
             Entry(row1, textvariable=self.product_var,
-                  font=('Arial', 10), width=100,
-                  state='readonly', bg='#f8f9fa').pack(side='left', padx=(0, 5))
+                  font=('Segoe UI', 10), width=100,
+                  state='readonly', bg='#F1F5F9').pack(side='left', padx=(0, 5))
 
             # Кнопка выбора продукта
             Button(row1, text="...",
                    command=self.open_product_selector,
-                   bg='#3498db', fg='white',
-                   font=('Arial', 10, 'bold'),
+                   bg='#4F46E5', fg='white',
+                   font=('Segoe UI', 10, 'bold'),
                    width=3, cursor="hand2").pack(side='left', padx=(0, 20))
 
-            Label(row1, text="Код продукта:", font=('Arial', 10, 'bold'),
+            Label(row1, text="Код продукта:", font=('Segoe UI', 10, 'bold'),
                   bg='white', width=12, anchor='w').pack(side='left')
 
             Entry(row1, textvariable=self.product_code_var,
-                  font=('Arial', 10), width=15, state='readonly',
-                  bg='#f8f9fa').pack(side='left', padx=(0, 20))
+                  font=('Segoe UI', 10), width=15, state='readonly',
+                  bg='#F1F5F9').pack(side='left', padx=(0, 20))
 
             # Кнопка "Нормы" - ДОБАВЛЕНО
             self.norms_button = Button(row1,
                                        text="📊 НОРМЫ",
                                        command=self.show_product_norms,
-                                       bg='#f39c12', fg='white',
-                                       font=('Arial', 9, 'bold'),
+                                       bg='#D97706', fg='white',
+                                       font=('Segoe UI', 9, 'bold'),
                                        padx=10, pady=3,
                                        cursor="hand2",
                                        state='disabled')
@@ -203,36 +204,36 @@ class LoadingCardTab(Frame):
             row2 = Frame(inner_params, bg='white')
             row2.pack(fill='x', pady=(0, 10))
 
-            Label(row2, text="Рецептура:", font=('Arial', 10, 'bold'),
+            Label(row2, text="Рецептура:", font=('Segoe UI', 10, 'bold'),
                   bg='white', width=12, anchor='w').pack(side='left')
 
             # Выпадающий список рецептур
             self.recipe_combo = ttk.Combobox(row2,
                                              textvariable=self.recipe_var,
-                                             font=('Arial', 10),
+                                             font=('Segoe UI', 10),
                                              state='readonly',
                                              width=30)
             self.recipe_combo.pack(side='left', padx=(0, 20))
             self.recipe_combo.bind('<<ComboboxSelected>>', self.on_recipe_selected)
 
-            Label(row2, text="Реактор:", font=('Arial', 10, 'bold'),
+            Label(row2, text="Реактор:", font=('Segoe UI', 10, 'bold'),
                   bg='white', width=8, anchor='w').pack(side='left')
 
             Entry(row2, textvariable=self.reactor_var,
-                  font=('Arial', 10), width=15).pack(side='left', padx=(0, 20))
+                  font=('Segoe UI', 10), width=15).pack(side='left', padx=(0, 20))
 
-            Label(row2, text="Количество, кг:", font=('Arial', 10, 'bold'),
+            Label(row2, text="Количество, кг:", font=('Segoe UI', 10, 'bold'),
                   bg='white', width=15, anchor='w').pack(side='left')
 
             Entry(row2, textvariable=self.quantity_var,
-                  font=('Arial', 10), width=15,
+                  font=('Segoe UI', 10), width=15,
                   validate='key',
                   validatecommand=(self.winfo_toplevel().register(self.validate_float), '%P')).pack(side='left')
 
             # Кнопка расчета
             Button(row2, text="📊 РАССЧИТАТЬ",
                    command=self.calculate_masses,
-                   bg='#3498db', fg='white', font=('Arial', 9, 'bold'),
+                   bg='#4F46E5', fg='white', font=('Segoe UI', 9, 'bold'),
                    padx=10, pady=3, cursor="hand2").pack(side='left', padx=(20, 0))
 
             # ===================== РЕДАКТИРУЕМАЯ РЕЦЕПТУРА =====================
@@ -240,12 +241,12 @@ class LoadingCardTab(Frame):
             edit_frame.pack(fill='both', expand=True, pady=(0, 10))
 
             # Заголовок таблицы редактирования
-            edit_header = Frame(edit_frame, bg='#3498db', height=40)
+            edit_header = Frame(edit_frame, bg='#4F46E5', height=40)
             edit_header.pack(fill='x')
             edit_header.pack_propagate(False)
 
             Label(edit_header, text="📝 РЕДАКТИРУЕМАЯ РЕЦЕПТУРА (двойной клик для редактирования)",
-                  font=('Arial', 11, 'bold'), bg='#3498db', fg='white').pack(pady=10)
+                  font=('Segoe UI', 11, 'bold'), bg='#4F46E5', fg='white').pack(pady=10)
 
             # Кнопки управления редактируемой таблицей
             edit_controls = Frame(edit_frame, bg='white')
@@ -253,22 +254,22 @@ class LoadingCardTab(Frame):
 
             Button(edit_controls, text="➕ ДОБАВИТЬ КОМПОНЕНТ",
                    command=self.add_component,
-                   bg='#2ecc71', fg='white', font=('Arial', 9, 'bold'),
+                   bg='#16A34A', fg='white', font=('Segoe UI', 9, 'bold'),
                    padx=10, pady=3, cursor="hand2").pack(side='left', padx=5)
 
             Button(edit_controls, text="🗑️ УДАЛИТЬ ВЫБРАННЫЙ",
                    command=self.delete_component,
-                   bg='#e74c3c', fg='white', font=('Arial', 9, 'bold'),
+                   bg='#DC2626', fg='white', font=('Segoe UI', 9, 'bold'),
                    padx=10, pady=3, cursor="hand2").pack(side='left', padx=5)
 
             Button(edit_controls, text="🔄 ОБНОВИТЬ РАСЧЕТ",
                    command=self.calculate_masses,
-                   bg='#3498db', fg='white', font=('Arial', 9, 'bold'),
+                   bg='#4F46E5', fg='white', font=('Segoe UI', 9, 'bold'),
                    padx=10, pady=3, cursor="hand2").pack(side='left', padx=5)
 
             Button(edit_controls, text="📋 КОПИРОВАТЬ В БУФЕР",
                    command=self.copy_to_clipboard,
-                   bg='#9b59b6', fg='white', font=('Arial', 9, 'bold'),
+                   bg='#7C3AED', fg='white', font=('Segoe UI', 9, 'bold'),
                    padx=10, pady=3, cursor="hand2").pack(side='right', padx=5)
 
             # Таблица для редактирования
@@ -284,14 +285,14 @@ class LoadingCardTab(Frame):
                 self.edit_tree.heading(col, text=col)
                 self.edit_tree.column(col, width=column_widths_edit[idx], anchor='center')
 
-            # Стилизация
+            # Стилизация (используем единый стиль темы, заданный в modern_start_window.configure_styles)
             style = ttk.Style()
             style.configure("Treeview",
-                            background="white",
-                            foreground="black",
-                            rowheight=25,
-                            fieldbackground="white")
-            style.map('Treeview', background=[('selected', '#3498db')])
+                            background=COLORS['surface'],
+                            foreground=COLORS['on_surface'],
+                            rowheight=30,
+                            fieldbackground=COLORS['surface'])
+            style.map('Treeview', background=[('selected', COLORS['primary'])])
 
             # Полоса прокрутки для таблицы редактирования
             edit_scrollbar = Scrollbar(edit_table_frame, orient='vertical', command=self.edit_tree.yview)
@@ -304,17 +305,17 @@ class LoadingCardTab(Frame):
             self.edit_tree.bind('<Double-Button-1>', self.start_editing_cell)
 
             # Панель итогов редактируемой рецептуры
-            edit_totals_frame = Frame(edit_frame, bg='#f8f9fa', height=30)
+            edit_totals_frame = Frame(edit_frame, bg='#F1F5F9', height=30)
             edit_totals_frame.pack(fill='x', side='bottom')
             edit_totals_frame.pack_propagate(False)
 
             self.edit_totals_label = Label(edit_totals_frame,
                                            text="Сумма процентов: 0.0000% | Общая масса: 0.000 кг",
-                                           font=('Arial', 9, 'bold'), bg='#f8f9fa', fg='#2c3e50')
+                                           font=('Segoe UI', 9, 'bold'), bg='#F1F5F9', fg='#0F172A')
             self.edit_totals_label.pack(pady=5)
 
             # ===================== НИЖНИЙ РЯД: ОРИГИНАЛЬНАЯ РЕЦЕПТУРА И АНАЛОГИ =====================
-            bottom_frame = Frame(scrollable_frame, bg='#f5f5f5')
+            bottom_frame = Frame(scrollable_frame, bg='#F8FAFC')
             bottom_frame.pack(fill='both', expand=True, pady=(0, 20))
 
             # Левая часть: оригинальная (не редактируемая) рецептура
@@ -322,12 +323,12 @@ class LoadingCardTab(Frame):
             original_frame.pack(side='left', fill='both', expand=True, padx=(0, 5))
 
             # Заголовок оригинальной рецептуры
-            original_header = Frame(original_frame, bg='#95a5a6', height=40)
+            original_header = Frame(original_frame, bg='#64748B', height=40)
             original_header.pack(fill='x')
             original_header.pack_propagate(False)
 
             Label(original_header, text="📄 ОРИГИНАЛЬНАЯ РЕЦЕПТУРА (не редактируется)",
-                  font=('Arial', 11, 'bold'), bg='#95a5a6', fg='white').pack(pady=10)
+                  font=('Segoe UI', 11, 'bold'), bg='#64748B', fg='white').pack(pady=10)
 
             # Таблица оригинальной рецептуры
             original_table_frame = Frame(original_frame)
@@ -350,13 +351,13 @@ class LoadingCardTab(Frame):
             original_scrollbar.pack(side='right', fill='y')
 
             # Панель итогов оригинальной рецептуры
-            original_totals_frame = Frame(original_frame, bg='#ecf0f1', height=30)
+            original_totals_frame = Frame(original_frame, bg='#F1F5F9', height=30)
             original_totals_frame.pack(fill='x', side='bottom')
             original_totals_frame.pack_propagate(False)
 
             self.original_totals_label = Label(original_totals_frame,
                                                text="Сумма процентов: 0.0000%",
-                                               font=('Arial', 9), bg='#ecf0f1', fg='#2c3e50')
+                                               font=('Segoe UI', 9), bg='#F1F5F9', fg='#0F172A')
             self.original_totals_label.pack(pady=5)
 
             # Правая часть: аналоги компонентов
@@ -364,12 +365,12 @@ class LoadingCardTab(Frame):
             analogs_frame.pack(side='right', fill='both', expand=True, padx=(5, 0))
 
             # Заголовок аналогов
-            analogs_header = Frame(analogs_frame, bg='#9b59b6', height=40)
+            analogs_header = Frame(analogs_frame, bg='#7C3AED', height=40)
             analogs_header.pack(fill='x')
             analogs_header.pack_propagate(False)
 
             Label(analogs_header, text="🔄 АНАЛОГИ КОМПОНЕНТОВ (список в разработке)",
-                  font=('Arial', 11, 'bold'), bg='#9b59b6', fg='white').pack(pady=10)
+                  font=('Segoe UI', 11, 'bold'), bg='#7C3AED', fg='white').pack(pady=10)
 
             # Текстовая область для аналогов
             analogs_text_frame = Frame(analogs_frame)
@@ -377,8 +378,8 @@ class LoadingCardTab(Frame):
 
             self.analogs_text = Text(analogs_text_frame,
                                      height=6,
-                                     font=('Arial', 10),
-                                     bg='#f8f9fa',
+                                     font=('Segoe UI', 10),
+                                     bg='#F1F5F9',
                                      wrap='word',
                                      state='normal')
             self.analogs_text.pack(fill='both', expand=True)
@@ -398,19 +399,19 @@ class LoadingCardTab(Frame):
 
             Button(analogs_controls, text="📋 ЗАГРУЗИТЬ АНАЛОГИ",
                    command=self.load_analogs,
-                   bg='#3498db', fg='white', font=('Arial', 9, 'bold'),
+                   bg='#4F46E5', fg='white', font=('Segoe UI', 9, 'bold'),
                    padx=10, pady=3, cursor="hand2").pack(side='left', padx=5)
 
             Button(analogs_controls, text="➕ ДОБАВИТЬ АНАЛОГ",
                    command=self.add_analog,
-                   bg='#2ecc71', fg='white', font=('Arial', 9, 'bold'),
+                   bg='#16A34A', fg='white', font=('Segoe UI', 9, 'bold'),
                    padx=10, pady=3, cursor="hand2").pack(side='right', padx=5)
 
             # Статус бар внизу вкладки
             self.status_label = Label(self,
                                       text="Выберите продукт и рецептуру для создания карты загрузки",
-                                      font=('Arial', 9),
-                                      bg='#34495e',
+                                      font=('Segoe UI', 9),
+                                      bg='#1E293B',
                                       fg='white',
                                       anchor='w')
             self.status_label.pack(fill='x', side='bottom', ipady=5)
@@ -445,24 +446,24 @@ class LoadingCardTab(Frame):
             self.center_window(selector_dialog)
 
             # Заголовок
-            header_frame = Frame(selector_dialog, bg='#3498db', height=50)
+            header_frame = Frame(selector_dialog, bg='#4F46E5', height=50)
             header_frame.pack(fill='x')
             header_frame.pack_propagate(False)
 
             Label(header_frame, text="ВЫБОР ПРОДУКТА",
-                  font=('Arial', 14, 'bold'),
-                  bg='#3498db', fg='white').pack(pady=15)
+                  font=('Segoe UI', 14, 'bold'),
+                  bg='#4F46E5', fg='white').pack(pady=15)
 
             # Поиск
             search_frame = Frame(selector_dialog, bg='white', padx=20, pady=10)
             search_frame.pack(fill='x')
 
-            Label(search_frame, text="Поиск:", font=('Arial', 10, 'bold'),
+            Label(search_frame, text="Поиск:", font=('Segoe UI', 10, 'bold'),
                   bg='white').pack(side='left')
 
             search_var = StringVar()
             search_entry = Entry(search_frame, textvariable=search_var,
-                                 font=('Arial', 10), width=40)
+                                 font=('Segoe UI', 10), width=40)
             search_entry.pack(side='left', padx=(5, 10))
 
             search_entry.focus_set()
@@ -557,14 +558,14 @@ class LoadingCardTab(Frame):
 
             Button(button_frame, text="ВЫБРАТЬ",
                    command=select_product,
-                   bg='#27ae60', fg='white',
-                   font=('Arial', 10, 'bold'),
+                   bg='#16A34A', fg='white',
+                   font=('Segoe UI', 10, 'bold'),
                    padx=20, pady=5, cursor="hand2").pack(side='left', padx=20)
 
             Button(button_frame, text="ОТМЕНА",
                    command=selector_dialog.destroy,
-                   bg='#95a5a6', fg='white',
-                   font=('Arial', 10, 'bold'),
+                   bg='#64748B', fg='white',
+                   font=('Segoe UI', 10, 'bold'),
                    padx=20, pady=5, cursor="hand2").pack(side='right', padx=20)
 
             self.logger.info("Открыт диалог выбора продукта")
@@ -604,12 +605,12 @@ class LoadingCardTab(Frame):
             norms_window.geometry("900x600")
 
             # Заголовок
-            header_frame = Frame(norms_window, bg='#9b59b6', height=50)
+            header_frame = Frame(norms_window, bg='#7C3AED', height=50)
             header_frame.pack(fill='x')
             header_frame.pack_propagate(False)
 
             Label(header_frame, text=f"НОРМЫ ФИЗИКО-ХИМИЧЕСКИХ ПОКАЗАТЕЛЕЙ: {product_code}",
-                  font=('Arial', 14, 'bold'), bg='#9b59b6', fg='white').pack(pady=15)
+                  font=('Segoe UI', 14, 'bold'), bg='#7C3AED', fg='white').pack(pady=15)
 
             # Таблица норм
             table_frame = Frame(norms_window, bg='white')
@@ -649,7 +650,7 @@ class LoadingCardTab(Frame):
 
             Button(button_frame, text="ЗАКРЫТЬ",
                    command=norms_window.destroy,
-                   bg='#95a5a6', fg='white', font=('Arial', 10, 'bold'),
+                   bg='#64748B', fg='white', font=('Segoe UI', 10, 'bold'),
                    padx=20, pady=5, cursor="hand2").pack(side='right', padx=20)
 
             self.logger.info(f"Отображены нормы для продукта: {product_code}")
@@ -691,12 +692,12 @@ class LoadingCardTab(Frame):
             scrollbar.pack(side="right", fill="y")
 
             # Заголовок
-            header_frame = Frame(scrollable_frame, bg='#3498db', height=50)
+            header_frame = Frame(scrollable_frame, bg='#4F46E5', height=50)
             header_frame.pack(fill='x', pady=(0, 10))
             header_frame.pack_propagate(False)
 
             Label(header_frame, text="ЗАПОЛНЕНИЕ ШАБЛОНА КАРТЫ ЗАГРУЗКИ",
-                  font=('Arial', 14, 'bold'), bg='#3498db', fg='white').pack(pady=15)
+                  font=('Segoe UI', 14, 'bold'), bg='#4F46E5', fg='white').pack(pady=15)
 
             # Основной контент
             content_frame = Frame(scrollable_frame, bg='white', padx=20, pady=10)
@@ -704,7 +705,7 @@ class LoadingCardTab(Frame):
 
             # Основные данные
             main_frame = LabelFrame(content_frame, text="Основные данные",
-                                    font=('Arial', 11, 'bold'),
+                                    font=('Segoe UI', 11, 'bold'),
                                     padx=10, pady=10, bg='white')
             main_frame.pack(fill='x', pady=(0, 10))
 
@@ -757,7 +758,7 @@ class LoadingCardTab(Frame):
             # присутствуют в форме постоянно для простоты — при других типах
             # шаблона просто игнорируются.
             concentrate_frame = LabelFrame(content_frame, text="Параметры концентрата (только для шаблона \"Концентраты\")",
-                                           font=('Arial', 11, 'bold'),
+                                           font=('Segoe UI', 11, 'bold'),
                                            padx=10, pady=10, bg='white')
             concentrate_frame.pack(fill='x', pady=(0, 10))
 
@@ -790,7 +791,7 @@ class LoadingCardTab(Frame):
 
             # Временные параметры
             time_frame = LabelFrame(content_frame, text="Временные параметры",
-                                    font=('Arial', 11, 'bold'),
+                                    font=('Segoe UI', 11, 'bold'),
                                     padx=10, pady=10, bg='white')
             time_frame.pack(fill='x', pady=(0, 10))
 
@@ -810,7 +811,7 @@ class LoadingCardTab(Frame):
 
             # Вязкость
             viscosity_frame = LabelFrame(content_frame, text="Вязкость",
-                                         font=('Arial', 11, 'bold'),
+                                         font=('Segoe UI', 11, 'bold'),
                                          padx=10, pady=10, bg='white')
             viscosity_frame.pack(fill='x', pady=(0, 10))
 
@@ -826,7 +827,7 @@ class LoadingCardTab(Frame):
 
             # Результаты испытаний
             test_frame = LabelFrame(content_frame, text="Результаты испытаний (готовое масло)",
-                                    font=('Arial', 11, 'bold'),
+                                    font=('Segoe UI', 11, 'bold'),
                                     padx=10, pady=10, bg='white')
             test_frame.pack(fill='x', pady=(0, 10))
 
@@ -862,7 +863,7 @@ class LoadingCardTab(Frame):
 
             # Подписи
             sign_frame = LabelFrame(content_frame, text="Подписи и соответствие",
-                                    font=('Arial', 11, 'bold'),
+                                    font=('Segoe UI', 11, 'bold'),
                                     padx=10, pady=10, bg='white')
             sign_frame.pack(fill='x', pady=(0, 10))
 
@@ -1110,17 +1111,17 @@ class LoadingCardTab(Frame):
 
             Button(button_frame, text="💾 СОХРАНИТЬ EXCEL",
                    command=save_excel,
-                   bg='#27ae60', fg='white', font=('Arial', 10, 'bold'),
+                   bg='#16A34A', fg='white', font=('Segoe UI', 10, 'bold'),
                    padx=20, pady=8, cursor="hand2").pack(side='left', padx=10)
 
             Button(button_frame, text="📄 СОХРАНИТЬ PDF",
                    command=save_pdf,
-                   bg='#3498db', fg='white', font=('Arial', 10, 'bold'),
+                   bg='#4F46E5', fg='white', font=('Segoe UI', 10, 'bold'),
                    padx=20, pady=8, cursor="hand2").pack(side='left', padx=10)
 
             Button(button_frame, text="❌ ОТМЕНА",
                    command=filler_dialog.destroy,
-                   bg='#95a5a6', fg='white', font=('Arial', 10, 'bold'),
+                   bg='#64748B', fg='white', font=('Segoe UI', 10, 'bold'),
                    padx=20, pady=8, cursor="hand2").pack(side='right', padx=10)
 
             self.logger.info("Открыт диалог заполнения шаблона карты")
@@ -1366,7 +1367,7 @@ class LoadingCardTab(Frame):
         if not self.editable_data:
             self.edit_totals_label.config(
                 text="Сумма процентов: 0.0000% | Общая масса: 0.000 кг",
-                fg='#2c3e50'
+                fg='#0F172A'
             )
             return
 
@@ -1378,13 +1379,13 @@ class LoadingCardTab(Frame):
             if deviation > 0.0001:
                 self.edit_totals_label.config(
                     text=f"⚠ Сумма процентов: {total_percent:.4f}% (отклонение: {deviation:.4f}%) | Общая масса: {total_mass:.3f} кг",
-                    fg='#e74c3c'
+                    fg='#DC2626'
                 )
                 self.logger.warning(f"Сумма процентов отклоняется от 100% на {deviation:.4f}%")
             else:
                 self.edit_totals_label.config(
                     text=f"✓ Сумма процентов: {total_percent:.4f}% (100%) | Общая масса: {total_mass:.3f} кг",
-                    fg='#27ae60'
+                    fg='#16A34A'
                 )
 
         except Exception as e:
@@ -1395,7 +1396,7 @@ class LoadingCardTab(Frame):
         if not self.original_recipe_data:
             self.original_totals_label.config(
                 text="Сумма процентов: 0.0000%",
-                fg='#2c3e50'
+                fg='#0F172A'
             )
             return
 
@@ -1406,12 +1407,12 @@ class LoadingCardTab(Frame):
             if deviation > 0.0001:
                 self.original_totals_label.config(
                     text=f"⚠ Сумма процентов: {total_percent:.4f}% (отклонение: {deviation:.4f}%)",
-                    fg='#e74c3c'
+                    fg='#DC2626'
                 )
             else:
                 self.original_totals_label.config(
                     text=f"✓ Сумма процентов: {total_percent:.4f}% (100%)",
-                    fg='#27ae60'
+                    fg='#16A34A'
                 )
 
         except Exception as e:
@@ -1588,7 +1589,7 @@ class LoadingCardTab(Frame):
             add_dialog.geometry("400x300")
 
             Label(add_dialog, text="ДОБАВЛЕНИЕ НОВОГО КОМПОНЕНТА",
-                  font=('Arial', 12, 'bold')).pack(pady=10)
+                  font=('Segoe UI', 12, 'bold')).pack(pady=10)
 
             # Поля ввода
             input_frame = Frame(add_dialog)
@@ -1596,15 +1597,15 @@ class LoadingCardTab(Frame):
 
             Label(input_frame, text="Код компонента:").pack(anchor='w', pady=(5, 0))
             code_var = StringVar()
-            Entry(input_frame, textvariable=code_var, font=('Arial', 10)).pack(fill='x', pady=(0, 10))
+            Entry(input_frame, textvariable=code_var, font=('Segoe UI', 10)).pack(fill='x', pady=(0, 10))
 
             Label(input_frame, text="Наименование компонента:").pack(anchor='w', pady=(5, 0))
             name_var = StringVar()
-            Entry(input_frame, textvariable=name_var, font=('Arial', 10)).pack(fill='x', pady=(0, 10))
+            Entry(input_frame, textvariable=name_var, font=('Segoe UI', 10)).pack(fill='x', pady=(0, 10))
 
             Label(input_frame, text="Процент, % (4 знака):").pack(anchor='w', pady=(5, 0))
             percent_var = StringVar(value="0.0000")
-            Entry(input_frame, textvariable=percent_var, font=('Arial', 10)).pack(fill='x', pady=(0, 20))
+            Entry(input_frame, textvariable=percent_var, font=('Segoe UI', 10)).pack(fill='x', pady=(0, 20))
 
             # Кнопки
             button_frame = Frame(add_dialog)
@@ -1655,10 +1656,10 @@ class LoadingCardTab(Frame):
                 messagebox.showinfo("Успех", "Компонент добавлен")
 
             Button(button_frame, text="Добавить", command=add_component_action,
-                   bg='#2ecc71', fg='white', font=('Arial', 10, 'bold')).pack(side='left', padx=(0, 10))
+                   bg='#16A34A', fg='white', font=('Segoe UI', 10, 'bold')).pack(side='left', padx=(0, 10))
 
             Button(button_frame, text="Отмена", command=add_dialog.destroy,
-                   bg='#95a5a6', fg='white', font=('Arial', 10, 'bold')).pack(side='right')
+                   bg='#64748B', fg='white', font=('Segoe UI', 10, 'bold')).pack(side='right')
 
             self.logger.debug("Открыто диалоговое окно добавления компонента")
 
@@ -1984,7 +1985,7 @@ class LoadingCardTab(Frame):
             self.analogs_text.insert('end', "4. Цена и поставщики\n")
 
             # Настройка тегов для форматирования
-            self.analogs_text.tag_configure('header', font=('Arial', 10, 'bold'))
+            self.analogs_text.tag_configure('header', font=('Segoe UI', 10, 'bold'))
 
             self.analogs_text.configure(state='disabled')
 
