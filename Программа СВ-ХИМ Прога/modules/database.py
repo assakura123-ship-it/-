@@ -721,6 +721,40 @@ class DatabaseManager:
         ''', (product_code, product_name, description))
         return self.cursor.lastrowid
 
+    def upsert_product(self, product_code: str, product_name: str, description: str = None) -> None:
+        """Создать продукт в справочнике products, если его ещё нет, либо
+        обновить наименование/описание существующего.
+
+        Используется номенклатурой как единственным местом ввода
+        кода/наименования — таблица products при этом остаётся
+        "теневым" хранилищем для внешних ключей (recipes, warehouse,
+        loading_cards, norms), но пользователь с ней напрямую не работает.
+        """
+        try:
+            existing = self.get_product_by_code(product_code)
+            if existing:
+                updates = []
+                params = []
+                if product_name and product_name != existing.get('product_name'):
+                    updates.append('product_name = ?')
+                    params.append(product_name)
+                if description is not None and description != existing.get('description'):
+                    updates.append('description = ?')
+                    params.append(description)
+                if updates:
+                    updates.append('updated_date = CURRENT_TIMESTAMP')
+                    params.append(product_code)
+                    query = f"UPDATE products SET {', '.join(updates)} WHERE product_code = ?"
+                    self.execute_query(query, tuple(params))
+            else:
+                self.execute_query('''
+                    INSERT INTO products (product_code, product_name, description)
+                    VALUES (?, ?, ?)
+                ''', (product_code, product_name, description or ''))
+        except sqlite3.Error as e:
+            self.logger.error(f"Ошибка upsert продукта '{product_code}': {e}")
+            raise
+
     def create_recipe(self, product_code: str, recipe_number: str, recipe_name: str = "") -> int:
         """Создание новой рецептуры"""
         self.execute_query('''
@@ -1346,12 +1380,32 @@ class DatabaseManager:
 
     def create_nomenclature_item(self, name: str, parent_id: Optional[int] = None,
                                   product_code: Optional[str] = None,
-                                  template_type: Optional[str] = None) -> int:
-        """Создать позицию номенклатуры (привязанную к продукту и типу шаблона карты).
+                                  template_type: Optional[str] = None,
+                                  description: Optional[str] = None) -> int:
+        """Создать позицию номенклатуры — единственную точку ввода продукта.
 
-        template_type: один из 'п.', 'Концентрат', '1цех' (или None, если ещё не выбран)
+        Номенклатура является расширенным справочником продуктов: каждая
+        позиция ОДНОВРЕМЕННО является записью в products (создаётся/
+        обновляется автоматически по product_code+name через upsert_product),
+        поэтому отдельная вкладка "Продукты" больше не нужна.
+
+        template_type: один из 'oil', 'concentrate', 'workshop1' (или None,
+        если ещё не выбран).
         """
         try:
+            product_code = (product_code or '').strip() or None
+            name = (name or '').strip()
+
+            if product_code:
+                # Код продукта должен быть уникален в пределах всей номенклатуры
+                # (products.product_code имеет UNIQUE-ограничение)
+                existing_item = self.get_nomenclature_item_by_product_code(product_code)
+                if existing_item:
+                    raise ValueError(
+                        f"Код '{product_code}' уже используется позицией '{existing_item['name']}'"
+                    )
+                self.upsert_product(product_code, name, description)
+
             self.cursor.execute(
                 """INSERT INTO nomenclature (parent_id, name, item_type, product_code, template_type)
                    VALUES (?, ?, 'item', ?, ?)""",
@@ -1370,20 +1424,34 @@ class DatabaseManager:
 
     def update_nomenclature_node(self, node_id: int, name: str = None,
                                   product_code: str = None, template_type: str = None,
-                                  parent_id: int = -1) -> bool:
+                                  parent_id: int = -1, description: str = None) -> bool:
         """Обновить узел номенклатуры. parent_id=-1 означает "не менять"
         (т.к. None - валидное значение для перемещения узла в корень).
         Для product_code/template_type: None означает "не менять", а
-        пустая строка '' означает "сбросить значение в NULL"."""
+        пустая строка '' означает "сбросить значение в NULL".
+
+        Если задан code продукта (не пустая строка), соответствующая запись
+        в products создаётся/обновляется автоматически (see upsert_product)."""
         try:
+            node = self.get_nomenclature_node(node_id)
+            if node is None:
+                return False
+
             updates = []
             params = []
             if name is not None:
                 updates.append('name = ?')
                 params.append(name)
             if product_code is not None:
+                new_code = product_code if product_code != '' else None
+                if new_code and new_code != node.get('product_code'):
+                    dup = self.get_nomenclature_item_by_product_code(new_code)
+                    if dup and dup['id'] != node_id:
+                        self.logger.warning(
+                            f"Код '{new_code}' уже используется позицией '{dup['name']}'")
+                        return False
                 updates.append('product_code = ?')
-                params.append(product_code if product_code != '' else None)
+                params.append(new_code)
             if template_type is not None:
                 updates.append('template_type = ?')
                 params.append(template_type if template_type != '' else None)
@@ -1400,6 +1468,13 @@ class DatabaseManager:
             query = f"UPDATE nomenclature SET {', '.join(updates)} WHERE id = ?"
             self.cursor.execute(query, params)
             self.conn.commit()
+
+            # Синхронизируем справочник products (для не-папок с указанным кодом)
+            final_code = product_code if product_code not in (None, '') else node.get('product_code')
+            final_name = name if name is not None else node.get('name')
+            if node['item_type'] == 'item' and final_code:
+                self.upsert_product(final_code, final_name, description)
+
             self.logger.info(f"Обновлён узел номенклатуры id={node_id}")
             return True
         except sqlite3.Error as e:
@@ -1470,6 +1545,135 @@ class DatabaseManager:
                LIMIT 1""",
             (product_code,)
         )
+
+    def get_nomenclature_items_in_subtree(self, folder_id: Optional[int]) -> List[Dict[str, Any]]:
+        """Получить все позиции (item_type='item') внутри указанной папки и
+        всех её вложенных подпапок (рекурсивно). folder_id=None означает
+        "вся номенклатура" (используется для полного экспорта).
+        """
+        try:
+            nodes = self.get_nomenclature_tree()
+            children_map = {}
+            for node in nodes:
+                children_map.setdefault(node['parent_id'], []).append(node)
+
+            items = []
+
+            def walk(parent_key):
+                for node in children_map.get(parent_key, []):
+                    if node['item_type'] == 'item':
+                        items.append(node)
+                    else:
+                        walk(node['id'])
+
+            if folder_id is None:
+                walk(None)
+            else:
+                walk(folder_id)
+            return items
+        except Exception as e:
+            self.logger.error(f"Ошибка получения позиций номенклатуры (folder_id={folder_id}): {e}")
+            return []
+
+    @log_operation("Импорт номенклатуры из Excel", LogLevel.INFO)
+    def import_nomenclature_from_excel(self, file_path: str, parent_id: Optional[int] = None,
+                                        replace_existing: bool = False) -> Dict[str, Any]:
+        """Импорт позиций номенклатуры (код + наименование) из Excel-файла
+        в указанную папку (parent_id). Формат файла — два столбца:
+        'Код' и 'Наименование' (порядок и регистр колонок не важны,
+        распознаются по ключевым словам в заголовке).
+
+        Возвращает словарь со статистикой: {'imported': int, 'updated': int,
+        'skipped': int, 'errors': [str, ...]}.
+        """
+        stats = {'imported': 0, 'updated': 0, 'skipped': 0, 'errors': []}
+        try:
+            df = pd.read_excel(file_path)
+
+            # Автоопределение колонок "Код" и "Наименование"
+            code_col = None
+            name_col = None
+            for col in df.columns:
+                col_lower = str(col).lower().strip()
+                if code_col is None and any(x in col_lower for x in ['код', 'code', 'артикул']):
+                    code_col = col
+                elif name_col is None and any(x in col_lower for x in ['наимен', 'назван', 'name']):
+                    name_col = col
+
+            if code_col is None or name_col is None:
+                # Резервный вариант: берём первые два столбца по позиции
+                if len(df.columns) >= 2:
+                    code_col, name_col = df.columns[0], df.columns[1]
+                else:
+                    stats['errors'].append(
+                        "Не удалось определить колонки 'Код' и 'Наименование' в файле")
+                    return stats
+
+            for idx, row in df.iterrows():
+                try:
+                    code = self._normalize_excel_value(row[code_col])
+                    name = self._normalize_excel_value(row[name_col])
+
+                    if not code or not name:
+                        stats['skipped'] += 1
+                        continue
+
+                    existing_item = self.get_nomenclature_item_by_product_code(code)
+                    if existing_item:
+                        if replace_existing:
+                            ok = self.update_nomenclature_node(
+                                existing_item['id'], name=name, parent_id=parent_id
+                            )
+                            if ok:
+                                stats['updated'] += 1
+                            else:
+                                stats['skipped'] += 1
+                        else:
+                            stats['skipped'] += 1
+                        continue
+
+                    self.create_nomenclature_item(name, parent_id=parent_id, product_code=code)
+                    stats['imported'] += 1
+                except Exception as row_err:
+                    stats['errors'].append(f"Строка {idx + 2}: {row_err}")
+                    stats['skipped'] += 1
+                    continue
+
+            self.logger.info(
+                f"Импорт номенклатуры из {file_path} завершён: "
+                f"добавлено={stats['imported']}, обновлено={stats['updated']}, "
+                f"пропущено={stats['skipped']}"
+            )
+            return stats
+        except Exception as e:
+            self.logger.error(f"Ошибка импорта номенклатуры из Excel: {e}")
+            stats['errors'].append(str(e))
+            return stats
+
+    @log_operation("Экспорт номенклатуры в Excel", LogLevel.INFO)
+    def export_nomenclature_to_excel(self, output_path: str, folder_id: Optional[int] = None) -> bool:
+        """Экспорт позиций номенклатуры (код + наименование) в Excel-файл.
+
+        folder_id=None экспортирует всю номенклатуру, иначе — только
+        позиции внутри указанной папки и её подпапок.
+        """
+        try:
+            items = self.get_nomenclature_items_in_subtree(folder_id)
+
+            rows = []
+            for item in items:
+                rows.append({
+                    'Код': item.get('product_code') or '',
+                    'Наименование': item.get('name') or '',
+                })
+
+            df = pd.DataFrame(rows, columns=['Код', 'Наименование'])
+            df.to_excel(output_path, index=False, engine='openpyxl')
+            self.logger.info(f"Экспортировано {len(rows)} позиций номенклатуры в {output_path}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Ошибка экспорта номенклатуры в Excel: {e}")
+            return False
 
 
 # Глобальный экземпляр менеджера базы данных
