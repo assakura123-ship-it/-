@@ -513,10 +513,13 @@ class ModernStartWindow:
             self.notebook.pack(fill='both', expand=True)
 
             # Создаем вкладки
+            # Примечание: отдельная вкладка "Продукты" удалена — "Номенклатура"
+            # теперь является единственным (расширенным) справочником продуктов:
+            # каждая позиция дерева номенклатуры одновременно хранит код,
+            # наименование и служит записью в products (см. database.py).
             self.create_home_tab()
             self.create_cards_tab()
             self.create_warehouse_tab()
-            self.create_products_tab()
             self.create_nomenclature_tab()
             self.create_logs_tab()
             self.create_import_export_tab()
@@ -613,7 +616,7 @@ class ModernStartWindow:
                 ("📄 Создать карту", self.open_editor_tab, 'primary'),
                 ("📋 Просмотр карт", lambda: self.notebook.select(1), 'secondary'),
                 ("🏭 Управление складом", lambda: self.notebook.select(2), 'secondary'),
-                ("📦 Продукты", lambda: self.notebook.select(3), 'secondary'),
+                ("🗂️ Номенклатура", lambda: self.notebook.select(3), 'secondary'),
                 ("📤 Импорт/Экспорт", lambda: self.notebook.select(5), 'secondary'),
                 ("📊 Системные логи", lambda: self.notebook.select(4), 'secondary')
             ]
@@ -817,90 +820,6 @@ class ModernStartWindow:
             self.logger.error(f"Ошибка создания вкладки склада: {e}")
             raise
 
-    def create_products_tab(self):
-        """Создание вкладки продуктов в современном стиле"""
-        try:
-            products_tab = Frame(self.notebook, bg=self.colors['background'])
-            self.notebook.add(products_tab, text="📦 Продукты")
-
-            container = Frame(products_tab, bg=self.colors['background'])
-            container.pack(fill='both', expand=True, padx=20, pady=20)
-
-            header_frame = Frame(container, bg=self.colors['background'])
-            header_frame.pack(fill='x', pady=(0, 5))
-
-            control_frame = Frame(header_frame, bg=self.colors['background'])
-            control_frame.pack(side='right')
-
-            refresh_btn = ttk.Button(
-                control_frame,
-                text="🔄",
-                command=self.load_products_data,
-                style="Compact.TButton"
-            )
-            refresh_btn.pack(side='left', padx=3)
-
-            add_btn = ttk.Button(
-                control_frame,
-                text="➕",
-                command=self.add_product_dialog,
-                style="Compact.TButton"
-            )
-            add_btn.pack(side='left', padx=3)
-
-            edit_btn = ttk.Button(
-                control_frame,
-                text="📝",
-                command=self.edit_product_dialog,
-                style="Compact.TButton"
-            )
-            edit_btn.pack(side='left', padx=3)
-
-            ToolTip(refresh_btn, "Обновить список продуктов")
-            ToolTip(add_btn, "Добавить продукт")
-            ToolTip(edit_btn, "Редактировать выбранный продукт")
-
-            list_inner = self.create_card_frame(container, padding=(0, 0))
-
-            headers_frame = Frame(list_inner, bg=self.colors['hover'], height=40)
-            headers_frame.pack(fill='x')
-            headers_frame.pack_propagate(False)
-
-            headers = ['Код', 'Наименование', 'Описание', 'Рецептур', 'Дата создания']
-            for header in headers:
-                Label(headers_frame, text=header,
-                      font=self.fonts['body_semibold'],
-                      bg=self.colors['hover'],
-                      fg=self.colors['on_surface']).pack(side='left', padx=20, pady=10)
-
-            list_container = Frame(list_inner, bg=self.colors['surface'])
-            list_container.pack(fill='both', expand=True, padx=20, pady=20)
-
-            scrollbar = Scrollbar(list_container)
-            scrollbar.pack(side='right', fill='y')
-
-            self.products_listbox = Listbox(list_container,
-                                            yscrollcommand=scrollbar.set,
-                                            font=self.fonts['body'],
-                                            bg=self.colors['surface'],
-                                            fg=self.colors['on_surface'],
-                                            relief='flat',
-                                            borderwidth=0,
-                                            selectbackground=self.colors['primary_light'],
-                                            selectforeground=self.colors['on_surface'],
-                                            height=15)
-            self.products_listbox.pack(side='left', fill='both', expand=True)
-
-            scrollbar.config(command=self.products_listbox.yview)
-
-            self.load_products_data()
-
-            self.logger.debug("Вкладка 'Продукты' создана успешно")
-
-        except Exception as e:
-            self.logger.error(f"Ошибка создания вкладки продуктов: {e}")
-            raise
-
     def create_nomenclature_tab(self):
         """Создание вкладки 'Номенклатура' — иерархия папок/групп и позиций.
 
@@ -956,11 +875,25 @@ class ModernStartWindow:
             )
             delete_btn.pack(side='left', padx=3)
 
+            import_btn = ttk.Button(
+                actions_frame, text="📥 Импорт из Excel", command=self.import_nomenclature_dialog,
+                style="Compact.TButton"
+            )
+            import_btn.pack(side='left', padx=3)
+
+            export_btn = ttk.Button(
+                actions_frame, text="📤 Экспорт в Excel", command=self.export_nomenclature_dialog,
+                style="Compact.TButton"
+            )
+            export_btn.pack(side='left', padx=3)
+
             ToolTip(refresh_btn, "Обновить дерево номенклатуры")
             ToolTip(add_folder_btn, "Добавить папку (группу)")
             ToolTip(add_item_btn, "Добавить позицию номенклатуры (продукт + шаблон карты)")
             ToolTip(edit_btn, "Редактировать выбранный элемент")
             ToolTip(delete_btn, "Удалить выбранный элемент (и вложенные)")
+            ToolTip(import_btn, "Импорт позиций номенклатуры из Excel (Код, Наименование) в выбранную папку")
+            ToolTip(export_btn, "Экспорт позиций номенклатуры выбранной папки (со всеми вложенными) в Excel")
 
             info_label = Label(
                 container,
@@ -1080,6 +1013,122 @@ class ModernStartWindow:
         node_id = int(selection[0])
         return db_manager.get_nomenclature_node(node_id)
 
+    def import_nomenclature_dialog(self):
+        """Диалог импорта позиций номенклатуры из Excel-файла.
+
+        Формат файла: 2 колонки — 'Код' и 'Наименование'. Группа/папка не
+        указывается в файле — пользователь выбирает целевую папку заранее
+        (текущий выбранный узел дерева, либо его родитель, если выбрана
+        позиция). Позиции импортируются в выбранную папку.
+        """
+        try:
+            selected = self._get_selected_nomenclature_node()
+            target_parent_id = None
+            target_label = '(корень)'
+            if selected:
+                if selected['item_type'] == 'folder':
+                    target_parent_id = selected['id']
+                    target_label = selected['name']
+                else:
+                    target_parent_id = selected['parent_id']
+                    if target_parent_id:
+                        parent_node = db_manager.get_nomenclature_node(target_parent_id)
+                        target_label = parent_node['name'] if parent_node else '(корень)'
+
+            filename = filedialog.askopenfilename(
+                title="Выберите Excel-файл для импорта номенклатуры",
+                filetypes=[("Excel файлы", "*.xlsx *.xls"), ("Все файлы", "*.*")]
+            )
+            if not filename:
+                return
+
+            if not messagebox.askyesno(
+                "Подтверждение импорта",
+                f"Импортировать позиции из файла:\n{filename}\n\nв папку: {target_label}?"
+            ):
+                return
+
+            replace_existing = messagebox.askyesno(
+                "Режим импорта",
+                "Обновлять уже существующие позиции с совпадающим кодом?\n\n"
+                "Да — обновить наименование у существующих позиций.\n"
+                "Нет — пропускать позиции с уже существующим кодом."
+            )
+
+            stats = db_manager.import_nomenclature_from_excel(
+                filename, parent_id=target_parent_id, replace_existing=replace_existing
+            )
+
+            self.load_nomenclature_tree()
+
+            summary = (
+                f"Импортировано: {stats.get('imported', 0)}\n"
+                f"Обновлено: {stats.get('updated', 0)}\n"
+                f"Пропущено: {stats.get('skipped', 0)}"
+            )
+            errors = stats.get('errors') or []
+            if errors:
+                shown_errors = "\n".join(str(e) for e in errors[:10])
+                if len(errors) > 10:
+                    shown_errors += f"\n… и ещё {len(errors) - 10} ошибок"
+                summary += f"\n\nОшибки ({len(errors)}):\n{shown_errors}"
+
+            messagebox.showinfo("Импорт номенклатуры завершён", summary)
+            self.logger.info(f"Импорт номенклатуры из {filename}: {stats}")
+            system_logger.log_operation("import_nomenclature",
+                                        f"Импорт из файла: {filename}, папка: {target_label}",
+                                        user="user")
+
+        except Exception as e:
+            self.logger.error(f"Ошибка импорта номенклатуры из Excel: {e}")
+            messagebox.showerror("Ошибка", f"Не удалось импортировать номенклатуру:\n{e}")
+
+    def export_nomenclature_dialog(self):
+        """Диалог экспорта позиций номенклатуры выбранной папки (рекурсивно
+        со всеми вложенными подпапками) в Excel-файл с колонками
+        'Код' и 'Наименование'. Если ничего не выбрано — экспортируется
+        всё дерево номенклатуры."""
+        try:
+            selected = self._get_selected_nomenclature_node()
+            folder_id = None
+            folder_label = 'вся номенклатура'
+            if selected:
+                if selected['item_type'] == 'folder':
+                    folder_id = selected['id']
+                    folder_label = selected['name']
+                else:
+                    folder_id = selected['parent_id']
+                    if folder_id:
+                        parent_node = db_manager.get_nomenclature_node(folder_id)
+                        folder_label = parent_node['name'] if parent_node else 'вся номенклатура'
+
+            filename = filedialog.asksaveasfilename(
+                title="Сохранить экспорт номенклатуры как",
+                defaultextension=".xlsx",
+                filetypes=[("Excel файлы", "*.xlsx")],
+                initialfile=f"nomenclature_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            )
+            if not filename:
+                return
+
+            success = db_manager.export_nomenclature_to_excel(filename, folder_id=folder_id)
+
+            if success:
+                messagebox.showinfo(
+                    "Успех",
+                    f"Номенклатура ({folder_label}) экспортирована в:\n{filename}"
+                )
+                self.logger.info(f"Экспорт номенклатуры ({folder_label}) в {filename}")
+                system_logger.log_operation("export_nomenclature",
+                                            f"Экспорт в файл: {filename}, папка: {folder_label}",
+                                            user="user")
+            else:
+                messagebox.showerror("Ошибка", "Не удалось экспортировать номенклатуру")
+
+        except Exception as e:
+            self.logger.error(f"Ошибка экспорта номенклатуры в Excel: {e}")
+            messagebox.showerror("Ошибка", f"Не удалось экспортировать номенклатуру:\n{e}")
+
     def add_nomenclature_folder_dialog(self):
         """Диалог добавления новой папки (группы) номенклатуры"""
         try:
@@ -1145,7 +1194,13 @@ class ModernStartWindow:
             self.logger.error(f"Ошибка диалога добавления папки номенклатуры: {e}")
 
     def add_nomenclature_item_dialog(self):
-        """Диалог добавления новой позиции номенклатуры (продукт + шаблон карты)"""
+        """Диалог добавления новой позиции номенклатуры.
+
+        Номенклатура — единственная точка ввода продукта: код и наименование
+        вводятся напрямую (как две колонки в Excel-импорте — Код и
+        Наименование), без выбора из отдельного справочника продуктов.
+        При сохранении запись в products создаётся/обновляется автоматически
+        (см. DatabaseManager.upsert_product)."""
         try:
             from modules.excel_template_processor import ExcelTemplateProcessor
 
@@ -1155,10 +1210,16 @@ class ModernStartWindow:
                 default_parent_id = selected['id'] if selected['item_type'] == 'folder' else selected['parent_id']
 
             dialog, main_frame = self.create_dialog(
-                "Новая позиция номенклатуры", 520, 420, header_color=self.colors['primary']
+                "Новая позиция номенклатуры", 520, 460, header_color=self.colors['primary']
             )
 
-            Label(main_frame, text="Название позиции*:",
+            Label(main_frame, text="Код*:",
+                  font=self.fonts['body_semibold'],
+                  bg=self.colors['background']).pack(anchor='w', pady=(5, 0))
+            code_var = StringVar()
+            ttk.Entry(main_frame, textvariable=code_var, font=self.fonts['body']).pack(fill='x', pady=(0, 10))
+
+            Label(main_frame, text="Наименование*:",
                   font=self.fonts['body_semibold'],
                   bg=self.colors['background']).pack(anchor='w', pady=(5, 0))
             name_var = StringVar()
@@ -1182,20 +1243,6 @@ class ModernStartWindow:
                     break
             parent_var.set(default_label)
 
-            Label(main_frame, text="Продукт (из справочника):",
-                  font=self.fonts['body_semibold'],
-                  bg=self.colors['background']).pack(anchor='w', pady=(5, 0))
-
-            products = db_manager.get_products()
-            product_options = [('(не выбран)', None)] + [
-                (f"{p['product_name']} ({p['product_code']})", p['product_code']) for p in products
-            ]
-            product_var = StringVar(value=product_options[0][0])
-            product_combo = ttk.Combobox(main_frame, textvariable=product_var,
-                                          values=[label for label, _ in product_options],
-                                          state='readonly', style="Modern.TCombobox")
-            product_combo.pack(fill='x', pady=(0, 10))
-
             Label(main_frame, text="Тип шаблона карты загрузки:",
                   font=self.fonts['body_semibold'],
                   bg=self.colors['background']).pack(anchor='w', pady=(5, 0))
@@ -1214,20 +1261,18 @@ class ModernStartWindow:
 
             def save_item():
                 name = name_var.get().strip()
+                code = code_var.get().strip()
                 if not name:
-                    messagebox.showwarning("Внимание", "Введите название позиции")
+                    messagebox.showwarning("Внимание", "Введите наименование позиции")
+                    return
+                if not code:
+                    messagebox.showwarning("Внимание", "Введите код позиции")
                     return
 
                 parent_id = None
                 for label, node_id in folder_options:
                     if label == parent_var.get():
                         parent_id = node_id
-                        break
-
-                product_code = None
-                for label, code in product_options:
-                    if label == product_var.get():
-                        product_code = code
                         break
 
                 template_type = None
@@ -1239,10 +1284,12 @@ class ModernStartWindow:
                 try:
                     db_manager.create_nomenclature_item(
                         name, parent_id=parent_id,
-                        product_code=product_code, template_type=template_type
+                        product_code=code, template_type=template_type
                     )
                     dialog.destroy()
                     self.load_nomenclature_tree()
+                except ValueError as e:
+                    messagebox.showerror("Ошибка", str(e))
                 except Exception as e:
                     messagebox.showerror("Ошибка", f"Не удалось создать позицию:\n{e}")
 
@@ -1293,31 +1340,16 @@ class ModernStartWindow:
                     break
             parent_var.set(default_label)
 
-            product_var = None
-            product_options = []
+            code_var = None
             template_var = None
             template_options = []
 
             if not is_folder:
-                Label(main_frame, text="Продукт (из справочника):",
+                Label(main_frame, text="Код*:",
                       font=self.fonts['body_semibold'],
                       bg=self.colors['background']).pack(anchor='w', pady=(5, 0))
-
-                products = db_manager.get_products()
-                product_options = [('(не выбран)', None)] + [
-                    (f"{p['product_name']} ({p['product_code']})", p['product_code']) for p in products
-                ]
-                product_var = StringVar()
-                product_combo = ttk.Combobox(main_frame, textvariable=product_var,
-                                              values=[label for label, _ in product_options],
-                                              state='readonly', style="Modern.TCombobox")
-                product_combo.pack(fill='x', pady=(0, 10))
-                default_product_label = '(не выбран)'
-                for label, code in product_options:
-                    if code == node.get('product_code'):
-                        default_product_label = label
-                        break
-                product_var.set(default_product_label)
+                code_var = StringVar(value=node.get('product_code') or '')
+                ttk.Entry(main_frame, textvariable=code_var, font=self.fonts['body']).pack(fill='x', pady=(0, 10))
 
                 Label(main_frame, text="Тип шаблона карты загрузки:",
                       font=self.fonts['body_semibold'],
@@ -1360,20 +1392,19 @@ class ModernStartWindow:
                 update_kwargs = {'name': name, 'parent_id': parent_id}
 
                 if not is_folder:
-                    product_code = None
-                    for label, code in product_options:
-                        if label == product_var.get():
-                            product_code = code
-                            break
+                    code = code_var.get().strip()
+                    if not code:
+                        messagebox.showwarning("Внимание", "Введите код позиции")
+                        return
                     template_type = None
                     for label, key in template_options:
                         if label == template_var.get():
                             template_type = key
                             break
+                    update_kwargs['product_code'] = code
                     # Явно допускаем сброс в None: передаём отдельным UPDATE,
                     # т.к. update_nomenclature_node игнорирует None-параметры
                     # (кроме parent_id) для гибкости частичного обновления.
-                    update_kwargs['product_code'] = product_code if product_code is not None else ''
                     update_kwargs['template_type'] = template_type if template_type is not None else ''
 
                 try:
@@ -1886,7 +1917,7 @@ class ModernStartWindow:
 
             self.export_type_var = StringVar(value="cards")
             types = [("Карты загрузок", "cards"),
-                     ("Справочник продуктов", "products"),
+                     ("Справочник номенклатуры/продуктов", "products"),
                      ("Данные склада", "warehouse")]
 
             for text, value in types:
@@ -2483,121 +2514,6 @@ class ModernStartWindow:
             messagebox.showerror("Ошибка", f"Не удалось экспортировать данные склада:\n{e}")
             self.logger.error(f"Ошибка экспорта склада: {e}")
 
-    def load_products_data(self):
-        """Загрузка данных продуктов из базы данных"""
-        try:
-            products = db_manager.get_products()
-
-            if hasattr(self, 'products_listbox'):
-                self.products_listbox.delete(0, END)
-
-            if not products:
-                if hasattr(self, 'products_listbox'):
-                    self.products_listbox.insert(END, "Нет продуктов в базе данных")
-                return
-
-            for product in products:
-                product_name = (product.get('product_name') or '')[:30]
-                description = (product.get('description') or '')[:25]
-                created_date = (product.get('created_date') or '')[:10]
-                display_text = f"{product['product_code']:<15} {product_name:<30} "
-                display_text += f"{description:<25} {product.get('recipe_count', 0):<10} "
-                display_text += f"{created_date:<12}"
-
-                if hasattr(self, 'products_listbox'):
-                    self.products_listbox.insert(END, display_text)
-
-            self.logger.info(f"Загружено {len(products)} продуктов")
-
-        except Exception as e:
-            self.logger.error(f"Ошибка загрузки данных продуктов: {e}")
-            if hasattr(self, 'products_listbox'):
-                self.products_listbox.insert(END, f"Ошибка загрузки: {str(e)}")
-
-    def add_product_dialog(self):
-        """Диалоговое окно добавления нового продукта"""
-        try:
-            dialog, main_frame = self.create_dialog(
-                "Добавление нового продукта", 500, 350, header_color=self.colors['primary']
-            )
-
-            Label(main_frame, text="ДОБАВЛЕНИЕ НОВОГО ПРОДУКТА",
-                  font=self.fonts['h3'],
-                  bg=self.colors['background']).pack(pady=5)
-
-            form_frame = Frame(main_frame, padx=10, pady=10, bg=self.colors['background'])
-            form_frame.pack(fill='both', expand=True)
-
-            Label(form_frame, text="Код продукта*:",
-                  font=self.fonts['body_semibold'],
-                  bg=self.colors['background']).pack(anchor='w', pady=(5, 0))
-            code_var = StringVar()
-            ttk.Entry(form_frame, textvariable=code_var,
-                      font=self.fonts['body']).pack(fill='x', pady=(0, 10))
-
-            Label(form_frame, text="Наименование*:",
-                  font=self.fonts['body_semibold'],
-                  bg=self.colors['background']).pack(anchor='w', pady=(5, 0))
-            name_var = StringVar()
-            ttk.Entry(form_frame, textvariable=name_var,
-                      font=self.fonts['body']).pack(fill='x', pady=(0, 10))
-
-            Label(form_frame, text="Описание:",
-                  font=self.fonts['body_semibold'],
-                  bg=self.colors['background']).pack(anchor='w', pady=(5, 0))
-            desc_text = Text(form_frame, height=4, font=self.fonts['body'])
-            desc_text.pack(fill='x', pady=(0, 20))
-
-            button_frame = Frame(main_frame, bg=self.colors['background'])
-            button_frame.pack(pady=(0, 10), fill='x')
-
-            def save_product():
-                if not code_var.get() or not name_var.get():
-                    messagebox.showwarning("Внимание", "Заполните обязательные поля (*)")
-                    return
-
-                description = desc_text.get("1.0", tk.END).strip()
-
-                db_manager.create_product(
-                    product_code=code_var.get(),
-                    product_name=name_var.get(),
-                    description=description
-                )
-
-                dialog.destroy()
-                self.load_products_data()
-
-                self.logger.info(f"Добавлен продукт: {code_var.get()} - {name_var.get()}")
-                system_logger.log_operation("add_product",
-                                            f"Добавлен продукт: {name_var.get()} ({code_var.get()})",
-                                            user="user")
-
-            save_btn = self.create_modern_button(
-                button_frame, "Сохранить", save_product, 'success'
-            )
-            save_btn.pack(side='left', padx=10)
-
-            cancel_btn = self.create_modern_button(
-                button_frame, "Отмена", dialog.destroy, 'secondary'
-            )
-            cancel_btn.pack(side='right', padx=10)
-
-        except Exception as e:
-            self.logger.error(f"Ошибка добавления продукта: {e}")
-
-    def edit_product_dialog(self):
-        """Диалоговое окно редактирования продукта"""
-        if not hasattr(self, 'products_listbox'):
-            return
-
-        selection = self.products_listbox.curselection()
-        if not selection:
-            messagebox.showwarning("Внимание", "Выберите продукт для редактирования")
-            return
-
-        messagebox.showinfo("Информация", "Функционал редактирования продуктов будет реализован в следующей версии")
-        self.logger.debug("Вызов метода редактирования продукта (в разработке)")
-
     def open_editor_tab(self):
         """Открыть новую вкладку с редактором"""
         try:
@@ -2677,7 +2593,7 @@ class ModernStartWindow:
                     "🏠 Главная": "Главная страница • Готов к работе",
                     "📋 Карты загрузок": "Просмотр карт загрузок",
                     "🏭 Склад": "Управление складом",
-                    "📦 Продукты": "Управление продуктами",
+                    "🗂️ Номенклатура": "Справочник номенклатуры (продуктов)",
                     "📊 Логи": "Просмотр системных логов",
                     "📤 Импорт/Экспорт": "Импорт и экспорт данных"
                 }
@@ -2895,7 +2811,8 @@ class ModernStartWindow:
                     self.import_status_label.config(text="✓ Импорт успешно завершен", fg=self.colors['success'])
                 messagebox.showinfo("Успех", f"Данные успешно импортированы из файла:\n{filename}")
 
-                self.load_products_data()
+                if hasattr(self, 'load_nomenclature_tree'):
+                    self.load_nomenclature_tree()
                 self.load_saved_cards()
                 self.load_warehouse_data()
 
