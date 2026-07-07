@@ -723,6 +723,71 @@ class LoadingCardTab(Frame):
             batch_num_var = StringVar(value=f"П-{datetime.now().strftime('%Y%m%d')}-{self.product_code}")
             Entry(main_frame, textvariable=batch_num_var, width=30).grid(row=2, column=1, pady=5, padx=(10, 0))
 
+            # Тип шаблона карты загрузки (автоопределение по номенклатуре + ручной выбор)
+            Label(main_frame, text="Шаблон карты:", bg='white', anchor='w').grid(row=3, column=0, sticky='w', pady=5)
+
+            template_type_labels = list(ExcelTemplateProcessor.TEMPLATE_LABELS.values())
+            template_type_keys = list(ExcelTemplateProcessor.TEMPLATE_LABELS.keys())
+
+            # Автоопределение по привязке продукта к номенклатуре (если задана)
+            detected_template_type = 'oil'
+            try:
+                nomenclature_item = db_manager.get_nomenclature_item_by_product_code(self.product_code)
+                if nomenclature_item and nomenclature_item.get('template_type') in template_type_keys:
+                    detected_template_type = nomenclature_item['template_type']
+            except Exception as e:
+                self.logger.debug(f"Не удалось определить шаблон по номенклатуре: {e}")
+
+            template_type_var = StringVar(
+                value=ExcelTemplateProcessor.TEMPLATE_LABELS.get(detected_template_type, template_type_labels[0])
+            )
+            template_combo = ttk.Combobox(main_frame, textvariable=template_type_var,
+                                           values=template_type_labels, state='readonly', width=35)
+            template_combo.grid(row=3, column=1, pady=5, padx=(10, 0), sticky='w')
+
+            def get_selected_template_type():
+                label = template_type_var.get()
+                for key, lbl in ExcelTemplateProcessor.TEMPLATE_LABELS.items():
+                    if lbl == label:
+                        return key
+                return 'oil'
+
+            # Дополнительные поля для шаблона "Концентраты" (варка загустителя):
+            # видны/актуальны только когда выбран тип 'concentrate', но
+            # присутствуют в форме постоянно для простоты — при других типах
+            # шаблона просто игнорируются.
+            concentrate_frame = LabelFrame(content_frame, text="Параметры концентрата (только для шаблона \"Концентраты\")",
+                                           font=('Arial', 11, 'bold'),
+                                           padx=10, pady=10, bg='white')
+            concentrate_frame.pack(fill='x', pady=(0, 10))
+
+            Label(concentrate_frame, text="Загуститель (название):", bg='white', anchor='w').grid(
+                row=0, column=0, sticky='w', pady=5)
+            thickener_name_var = StringVar()
+            Entry(concentrate_frame, textvariable=thickener_name_var, width=25).grid(
+                row=0, column=1, pady=5, padx=(10, 20))
+
+            Label(concentrate_frame, text="% ввода загустителя:", bg='white', anchor='w').grid(
+                row=0, column=2, sticky='w', pady=5)
+            concentrate_percentage_var = StringVar()
+            Entry(concentrate_frame, textvariable=concentrate_percentage_var, width=15).grid(
+                row=0, column=3, pady=5, padx=(10, 0))
+
+            Label(concentrate_frame, text="Растворитель (название):", bg='white', anchor='w').grid(
+                row=1, column=0, sticky='w', pady=5)
+            solvent_name_var = StringVar()
+            Entry(concentrate_frame, textvariable=solvent_name_var, width=25).grid(
+                row=1, column=1, pady=5, padx=(10, 20))
+
+            def toggle_concentrate_frame(*_args):
+                if get_selected_template_type() == 'concentrate':
+                    concentrate_frame.pack(fill='x', pady=(0, 10))
+                else:
+                    concentrate_frame.pack_forget()
+
+            template_combo.bind('<<ComboboxSelected>>', toggle_concentrate_frame)
+            toggle_concentrate_frame()
+
             # Временные параметры
             time_frame = LabelFrame(content_frame, text="Временные параметры",
                                     font=('Arial', 11, 'bold'),
@@ -854,9 +919,11 @@ class LoadingCardTab(Frame):
                         return
 
                     # Создаем данные для шаблона
+                    selected_template_type = get_selected_template_type()
                     card_data = {
                         'product_name': self.product_var.get(),
                         'product_code': self.product_code,
+                        'template_type': selected_template_type,
                         'workshop': workshop_var.get(),
                         'reactor': self.reactor_var.get(),
                         'batch_type': batch_type_var.get(),
@@ -864,6 +931,9 @@ class LoadingCardTab(Frame):
                         'issue_date': datetime.now().strftime('%d.%m.%Y'),
                         'batch_number': batch_num_var.get(),
                         'start_date': datetime.now().strftime('%d.%m.%Y'),
+                        'thickener_name': thickener_name_var.get(),
+                        'concentrate_percentage': concentrate_percentage_var.get(),
+                        'solvent_name': solvent_name_var.get(),
                         'components': [],
                         'time_data': {
                             'circulation_start': time_vars['circulation'].get(),
@@ -906,7 +976,7 @@ class LoadingCardTab(Frame):
                         })
 
                     # Создаем Excel файл
-                    processor = ExcelTemplateProcessor()
+                    processor = ExcelTemplateProcessor(template_type=selected_template_type)
                     success = processor.create_from_card_data(card_data, filename)
 
                     if success:
@@ -950,9 +1020,11 @@ class LoadingCardTab(Frame):
                         temp_excel = tmp.name
 
                     # Создаем данные для шаблона (аналогично Excel)
+                    selected_template_type = get_selected_template_type()
                     card_data = {
                         'product_name': self.product_var.get(),
                         'product_code': self.product_code,
+                        'template_type': selected_template_type,
                         'workshop': workshop_var.get(),
                         'reactor': self.reactor_var.get(),
                         'batch_type': batch_type_var.get(),
@@ -960,6 +1032,9 @@ class LoadingCardTab(Frame):
                         'issue_date': datetime.now().strftime('%d.%m.%Y'),
                         'batch_number': batch_num_var.get(),
                         'start_date': datetime.now().strftime('%d.%m.%Y'),
+                        'thickener_name': thickener_name_var.get(),
+                        'concentrate_percentage': concentrate_percentage_var.get(),
+                        'solvent_name': solvent_name_var.get(),
                         'components': [],
                         'time_data': {
                             'circulation_start': time_vars['circulation'].get(),
@@ -1002,7 +1077,7 @@ class LoadingCardTab(Frame):
                         })
 
                     # Создаем временный Excel
-                    processor = ExcelTemplateProcessor()
+                    processor = ExcelTemplateProcessor(template_type=selected_template_type)
                     success = processor.create_from_card_data(card_data, temp_excel)
 
                     if not success:

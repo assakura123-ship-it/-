@@ -459,6 +459,7 @@ class ModernStartWindow:
             self.create_cards_tab()
             self.create_warehouse_tab()
             self.create_products_tab()
+            self.create_nomenclature_tab()
             self.create_logs_tab()
             self.create_import_export_tab()
 
@@ -841,6 +842,551 @@ class ModernStartWindow:
         except Exception as e:
             self.logger.error(f"Ошибка создания вкладки продуктов: {e}")
             raise
+
+    def create_nomenclature_tab(self):
+        """Создание вкладки 'Номенклатура' — иерархия папок/групп и позиций.
+
+        Позволяет строить произвольную вложенность папок ("масла", "цех 2",
+        "цех 3", "концентраты", "цех 1" и т.д.), а внутри папок создавать
+        позиции номенклатуры, привязанные к конкретному продукту и к типу
+        шаблона карты загрузки (ExcelTemplateProcessor.TEMPLATE_TYPES).
+        Эти позиции затем можно использовать при создании карты загрузки
+        для автоматического выбора нужного шаблона.
+        """
+        try:
+            from modules.excel_template_processor import ExcelTemplateProcessor
+
+            nom_tab = Frame(self.notebook, bg=self.colors['background'])
+            self.notebook.add(nom_tab, text="🗂️ Номенклатура")
+
+            container = Frame(nom_tab, bg=self.colors['background'])
+            container.pack(fill='both', expand=True, padx=20, pady=20)
+
+            header_frame = Frame(container, bg=self.colors['background'])
+            header_frame.pack(fill='x', pady=(0, 5))
+
+            actions_frame = Frame(header_frame, bg=self.colors['background'])
+            actions_frame.pack(side='right')
+
+            refresh_btn = ttk.Button(
+                actions_frame, text="🔄", command=self.load_nomenclature_tree,
+                style="Compact.TButton"
+            )
+            refresh_btn.pack(side='left', padx=3)
+
+            add_folder_btn = ttk.Button(
+                actions_frame, text="📁➕", command=self.add_nomenclature_folder_dialog,
+                style="Compact.TButton"
+            )
+            add_folder_btn.pack(side='left', padx=3)
+
+            add_item_btn = ttk.Button(
+                actions_frame, text="🧪➕", command=self.add_nomenclature_item_dialog,
+                style="Compact.TButton"
+            )
+            add_item_btn.pack(side='left', padx=3)
+
+            edit_btn = ttk.Button(
+                actions_frame, text="📝", command=self.edit_nomenclature_dialog,
+                style="Compact.TButton"
+            )
+            edit_btn.pack(side='left', padx=3)
+
+            delete_btn = ttk.Button(
+                actions_frame, text="🗑️", command=self.delete_nomenclature_dialog,
+                style="Compact.TButton"
+            )
+            delete_btn.pack(side='left', padx=3)
+
+            ToolTip(refresh_btn, "Обновить дерево номенклатуры")
+            ToolTip(add_folder_btn, "Добавить папку (группу)")
+            ToolTip(add_item_btn, "Добавить позицию номенклатуры (продукт + шаблон карты)")
+            ToolTip(edit_btn, "Редактировать выбранный элемент")
+            ToolTip(delete_btn, "Удалить выбранный элемент (и вложенные)")
+
+            info_label = Label(
+                container,
+                text=("Стройте папки/группы для наименований (масла цех 2/3, концентраты, цех 1 и т.д.). "
+                      "Позиции внутри папок привязываются к продукту и к типу шаблона карты загрузки — "
+                      "этот шаблон будет предложен автоматически при создании карты."),
+                font=self.fonts['caption'],
+                bg=self.colors['background'],
+                fg=self.colors['secondary'],
+                wraplength=900,
+                justify='left'
+            )
+            info_label.pack(fill='x', pady=(0, 8))
+
+            table_inner = self.create_card_frame(container, padding=(10, 10))
+
+            columns = ('type', 'product', 'template')
+            self.nomenclature_tree = ttk.Treeview(
+                table_inner, columns=columns, show='tree headings', height=18
+            )
+            self.nomenclature_tree.heading('#0', text='Наименование / папка')
+            self.nomenclature_tree.heading('type', text='Тип')
+            self.nomenclature_tree.heading('product', text='Продукт (код)')
+            self.nomenclature_tree.heading('template', text='Шаблон карты')
+
+            self.nomenclature_tree.column('#0', width=320, anchor='w')
+            self.nomenclature_tree.column('type', width=90, anchor='center')
+            self.nomenclature_tree.column('product', width=220, anchor='w')
+            self.nomenclature_tree.column('template', width=220, anchor='w')
+
+            scrollbar = Scrollbar(table_inner, orient='vertical', command=self.nomenclature_tree.yview)
+            self.nomenclature_tree.configure(yscrollcommand=scrollbar.set)
+
+            self.nomenclature_tree.pack(side='left', fill='both', expand=True)
+            scrollbar.pack(side='right', fill='y')
+
+            self.nomenclature_tree.bind('<Double-Button-1>', lambda e: self.edit_nomenclature_dialog())
+
+            self.load_nomenclature_tree()
+
+            self.logger.debug("Вкладка 'Номенклатура' создана успешно")
+
+        except Exception as e:
+            self.logger.error(f"Ошибка создания вкладки номенклатуры: {e}")
+            raise
+
+    def load_nomenclature_tree(self):
+        """Загрузить и отобразить дерево номенклатуры из БД"""
+        try:
+            if not hasattr(self, 'nomenclature_tree'):
+                return
+
+            # Запоминаем какие узлы были раскрыты, чтобы восстановить после обновления
+            expanded_ids = set()
+            for iid in self.nomenclature_tree.get_children(''):
+                self._collect_expanded(iid, expanded_ids)
+
+            self.nomenclature_tree.delete(*self.nomenclature_tree.get_children())
+
+            nodes = db_manager.get_nomenclature_tree()
+
+            from modules.excel_template_processor import ExcelTemplateProcessor
+            template_labels = ExcelTemplateProcessor.TEMPLATE_LABELS
+
+            children_map = {}
+            for node in nodes:
+                children_map.setdefault(node['parent_id'], []).append(node)
+
+            def insert_children(parent_iid, parent_key):
+                for node in children_map.get(parent_key, []):
+                    is_folder = node['item_type'] == 'folder'
+                    icon = '📁 ' if is_folder else '🧪 '
+                    type_label = 'Папка' if is_folder else 'Позиция'
+                    product_label = node.get('product_code') or ''
+                    template_label = template_labels.get(node.get('template_type'), node.get('template_type') or '')
+
+                    iid = str(node['id'])
+                    self.nomenclature_tree.insert(
+                        parent_iid, 'end', iid=iid,
+                        text=f"{icon}{node['name']}",
+                        values=(type_label, product_label, template_label),
+                        open=(iid in expanded_ids)
+                    )
+                    insert_children(iid, node['id'])
+
+            insert_children('', None)
+
+        except Exception as e:
+            self.logger.error(f"Ошибка загрузки дерева номенклатуры: {e}")
+
+    def _collect_expanded(self, iid, expanded_ids):
+        """Рекурсивно собрать id раскрытых узлов дерева номенклатуры"""
+        try:
+            if self.nomenclature_tree.item(iid, 'open'):
+                expanded_ids.add(iid)
+            for child in self.nomenclature_tree.get_children(iid):
+                self._collect_expanded(child, expanded_ids)
+        except Exception:
+            pass
+
+    def _get_selected_nomenclature_node(self):
+        """Получить данные выбранного узла дерева номенклатуры (или None)"""
+        if not hasattr(self, 'nomenclature_tree'):
+            return None
+        selection = self.nomenclature_tree.selection()
+        if not selection:
+            return None
+        node_id = int(selection[0])
+        return db_manager.get_nomenclature_node(node_id)
+
+    def add_nomenclature_folder_dialog(self):
+        """Диалог добавления новой папки (группы) номенклатуры"""
+        try:
+            selected = self._get_selected_nomenclature_node()
+            default_parent_id = None
+            if selected:
+                default_parent_id = selected['id'] if selected['item_type'] == 'folder' else selected['parent_id']
+
+            dialog, main_frame = self.create_dialog(
+                "Новая папка номенклатуры", 480, 240, header_color=self.colors['primary']
+            )
+
+            Label(main_frame, text="Название папки*:",
+                  font=self.fonts['body_semibold'],
+                  bg=self.colors['background']).pack(anchor='w', pady=(5, 0))
+            name_var = StringVar()
+            ttk.Entry(main_frame, textvariable=name_var, font=self.fonts['body']).pack(fill='x', pady=(0, 10))
+
+            Label(main_frame, text="Родительская папка:",
+                  font=self.fonts['body_semibold'],
+                  bg=self.colors['background']).pack(anchor='w', pady=(5, 0))
+
+            folder_options = self._get_folder_options()
+            parent_var = StringVar()
+            parent_combo = ttk.Combobox(main_frame, textvariable=parent_var,
+                                         values=[label for label, _ in folder_options],
+                                         state='readonly', style="Modern.TCombobox")
+            parent_combo.pack(fill='x', pady=(0, 15))
+
+            default_label = '(корень)'
+            for label, node_id in folder_options:
+                if node_id == default_parent_id:
+                    default_label = label
+                    break
+            parent_var.set(default_label)
+
+            button_frame = Frame(main_frame, bg=self.colors['background'])
+            button_frame.pack(fill='x', pady=(0, 5))
+
+            def save_folder():
+                name = name_var.get().strip()
+                if not name:
+                    messagebox.showwarning("Внимание", "Введите название папки")
+                    return
+                parent_id = None
+                for label, node_id in folder_options:
+                    if label == parent_var.get():
+                        parent_id = node_id
+                        break
+                try:
+                    db_manager.create_nomenclature_folder(name, parent_id=parent_id)
+                    dialog.destroy()
+                    self.load_nomenclature_tree()
+                except Exception as e:
+                    messagebox.showerror("Ошибка", f"Не удалось создать папку:\n{e}")
+
+            save_btn = self.create_modern_button(button_frame, "Сохранить", save_folder, 'success')
+            save_btn.pack(side='left', padx=10)
+            cancel_btn = self.create_modern_button(button_frame, "Отмена", dialog.destroy, 'secondary')
+            cancel_btn.pack(side='right', padx=10)
+
+        except Exception as e:
+            self.logger.error(f"Ошибка диалога добавления папки номенклатуры: {e}")
+
+    def add_nomenclature_item_dialog(self):
+        """Диалог добавления новой позиции номенклатуры (продукт + шаблон карты)"""
+        try:
+            from modules.excel_template_processor import ExcelTemplateProcessor
+
+            selected = self._get_selected_nomenclature_node()
+            default_parent_id = None
+            if selected:
+                default_parent_id = selected['id'] if selected['item_type'] == 'folder' else selected['parent_id']
+
+            dialog, main_frame = self.create_dialog(
+                "Новая позиция номенклатуры", 520, 420, header_color=self.colors['primary']
+            )
+
+            Label(main_frame, text="Название позиции*:",
+                  font=self.fonts['body_semibold'],
+                  bg=self.colors['background']).pack(anchor='w', pady=(5, 0))
+            name_var = StringVar()
+            ttk.Entry(main_frame, textvariable=name_var, font=self.fonts['body']).pack(fill='x', pady=(0, 10))
+
+            Label(main_frame, text="Папка (группа):",
+                  font=self.fonts['body_semibold'],
+                  bg=self.colors['background']).pack(anchor='w', pady=(5, 0))
+
+            folder_options = self._get_folder_options()
+            parent_var = StringVar()
+            parent_combo = ttk.Combobox(main_frame, textvariable=parent_var,
+                                         values=[label for label, _ in folder_options],
+                                         state='readonly', style="Modern.TCombobox")
+            parent_combo.pack(fill='x', pady=(0, 10))
+
+            default_label = '(корень)'
+            for label, node_id in folder_options:
+                if node_id == default_parent_id:
+                    default_label = label
+                    break
+            parent_var.set(default_label)
+
+            Label(main_frame, text="Продукт (из справочника):",
+                  font=self.fonts['body_semibold'],
+                  bg=self.colors['background']).pack(anchor='w', pady=(5, 0))
+
+            products = db_manager.get_products()
+            product_options = [('(не выбран)', None)] + [
+                (f"{p['product_name']} ({p['product_code']})", p['product_code']) for p in products
+            ]
+            product_var = StringVar(value=product_options[0][0])
+            product_combo = ttk.Combobox(main_frame, textvariable=product_var,
+                                          values=[label for label, _ in product_options],
+                                          state='readonly', style="Modern.TCombobox")
+            product_combo.pack(fill='x', pady=(0, 10))
+
+            Label(main_frame, text="Тип шаблона карты загрузки:",
+                  font=self.fonts['body_semibold'],
+                  bg=self.colors['background']).pack(anchor='w', pady=(5, 0))
+
+            template_options = [('(не выбран)', None)] + [
+                (label, key) for key, label in ExcelTemplateProcessor.TEMPLATE_LABELS.items()
+            ]
+            template_var = StringVar(value=template_options[0][0])
+            template_combo = ttk.Combobox(main_frame, textvariable=template_var,
+                                           values=[label for label, _ in template_options],
+                                           state='readonly', style="Modern.TCombobox")
+            template_combo.pack(fill='x', pady=(0, 15))
+
+            button_frame = Frame(main_frame, bg=self.colors['background'])
+            button_frame.pack(fill='x', pady=(0, 5))
+
+            def save_item():
+                name = name_var.get().strip()
+                if not name:
+                    messagebox.showwarning("Внимание", "Введите название позиции")
+                    return
+
+                parent_id = None
+                for label, node_id in folder_options:
+                    if label == parent_var.get():
+                        parent_id = node_id
+                        break
+
+                product_code = None
+                for label, code in product_options:
+                    if label == product_var.get():
+                        product_code = code
+                        break
+
+                template_type = None
+                for label, key in template_options:
+                    if label == template_var.get():
+                        template_type = key
+                        break
+
+                try:
+                    db_manager.create_nomenclature_item(
+                        name, parent_id=parent_id,
+                        product_code=product_code, template_type=template_type
+                    )
+                    dialog.destroy()
+                    self.load_nomenclature_tree()
+                except Exception as e:
+                    messagebox.showerror("Ошибка", f"Не удалось создать позицию:\n{e}")
+
+            save_btn = self.create_modern_button(button_frame, "Сохранить", save_item, 'success')
+            save_btn.pack(side='left', padx=10)
+            cancel_btn = self.create_modern_button(button_frame, "Отмена", dialog.destroy, 'secondary')
+            cancel_btn.pack(side='right', padx=10)
+
+        except Exception as e:
+            self.logger.error(f"Ошибка диалога добавления позиции номенклатуры: {e}")
+
+    def edit_nomenclature_dialog(self):
+        """Диалог редактирования выбранного узла номенклатуры (папка или позиция)"""
+        try:
+            node = self._get_selected_nomenclature_node()
+            if not node:
+                messagebox.showwarning("Внимание", "Выберите элемент для редактирования")
+                return
+
+            from modules.excel_template_processor import ExcelTemplateProcessor
+
+            is_folder = node['item_type'] == 'folder'
+            title = "Редактирование папки" if is_folder else "Редактирование позиции"
+            dialog, main_frame = self.create_dialog(
+                title, 520, 420 if not is_folder else 260, header_color=self.colors['primary']
+            )
+
+            Label(main_frame, text="Название*:",
+                  font=self.fonts['body_semibold'],
+                  bg=self.colors['background']).pack(anchor='w', pady=(5, 0))
+            name_var = StringVar(value=node['name'])
+            ttk.Entry(main_frame, textvariable=name_var, font=self.fonts['body']).pack(fill='x', pady=(0, 10))
+
+            Label(main_frame, text="Родительская папка:",
+                  font=self.fonts['body_semibold'],
+                  bg=self.colors['background']).pack(anchor='w', pady=(5, 0))
+
+            folder_options = self._get_folder_options(exclude_id=node['id'])
+            parent_var = StringVar()
+            parent_combo = ttk.Combobox(main_frame, textvariable=parent_var,
+                                         values=[label for label, _ in folder_options],
+                                         state='readonly', style="Modern.TCombobox")
+            parent_combo.pack(fill='x', pady=(0, 10))
+            default_label = '(корень)'
+            for label, node_id in folder_options:
+                if node_id == node['parent_id']:
+                    default_label = label
+                    break
+            parent_var.set(default_label)
+
+            product_var = None
+            product_options = []
+            template_var = None
+            template_options = []
+
+            if not is_folder:
+                Label(main_frame, text="Продукт (из справочника):",
+                      font=self.fonts['body_semibold'],
+                      bg=self.colors['background']).pack(anchor='w', pady=(5, 0))
+
+                products = db_manager.get_products()
+                product_options = [('(не выбран)', None)] + [
+                    (f"{p['product_name']} ({p['product_code']})", p['product_code']) for p in products
+                ]
+                product_var = StringVar()
+                product_combo = ttk.Combobox(main_frame, textvariable=product_var,
+                                              values=[label for label, _ in product_options],
+                                              state='readonly', style="Modern.TCombobox")
+                product_combo.pack(fill='x', pady=(0, 10))
+                default_product_label = '(не выбран)'
+                for label, code in product_options:
+                    if code == node.get('product_code'):
+                        default_product_label = label
+                        break
+                product_var.set(default_product_label)
+
+                Label(main_frame, text="Тип шаблона карты загрузки:",
+                      font=self.fonts['body_semibold'],
+                      bg=self.colors['background']).pack(anchor='w', pady=(5, 0))
+
+                template_options = [('(не выбран)', None)] + [
+                    (label, key) for key, label in ExcelTemplateProcessor.TEMPLATE_LABELS.items()
+                ]
+                template_var = StringVar()
+                template_combo = ttk.Combobox(main_frame, textvariable=template_var,
+                                               values=[label for label, _ in template_options],
+                                               state='readonly', style="Modern.TCombobox")
+                template_combo.pack(fill='x', pady=(0, 15))
+                default_template_label = '(не выбран)'
+                for label, key in template_options:
+                    if key == node.get('template_type'):
+                        default_template_label = label
+                        break
+                template_var.set(default_template_label)
+
+            button_frame = Frame(main_frame, bg=self.colors['background'])
+            button_frame.pack(fill='x', pady=(0, 5))
+
+            def save_changes():
+                name = name_var.get().strip()
+                if not name:
+                    messagebox.showwarning("Внимание", "Введите название")
+                    return
+
+                parent_id = None
+                for label, pid in folder_options:
+                    if label == parent_var.get():
+                        parent_id = pid
+                        break
+
+                if parent_id == node['id']:
+                    messagebox.showwarning("Внимание", "Нельзя выбрать саму папку в качестве родителя")
+                    return
+
+                update_kwargs = {'name': name, 'parent_id': parent_id}
+
+                if not is_folder:
+                    product_code = None
+                    for label, code in product_options:
+                        if label == product_var.get():
+                            product_code = code
+                            break
+                    template_type = None
+                    for label, key in template_options:
+                        if label == template_var.get():
+                            template_type = key
+                            break
+                    # Явно допускаем сброс в None: передаём отдельным UPDATE,
+                    # т.к. update_nomenclature_node игнорирует None-параметры
+                    # (кроме parent_id) для гибкости частичного обновления.
+                    update_kwargs['product_code'] = product_code if product_code is not None else ''
+                    update_kwargs['template_type'] = template_type if template_type is not None else ''
+
+                try:
+                    ok = db_manager.update_nomenclature_node(node['id'], **update_kwargs)
+                    if not ok:
+                        messagebox.showerror("Ошибка", "Не удалось сохранить изменения")
+                        return
+                    if parent_id != node['parent_id']:
+                        move_ok = db_manager.move_nomenclature_node(node['id'], parent_id)
+                        if not move_ok:
+                            messagebox.showwarning(
+                                "Внимание",
+                                "Не удалось переместить элемент (нельзя переместить папку в саму себя или в её потомка)"
+                            )
+                    dialog.destroy()
+                    self.load_nomenclature_tree()
+                except Exception as e:
+                    messagebox.showerror("Ошибка", f"Не удалось сохранить изменения:\n{e}")
+
+            save_btn = self.create_modern_button(button_frame, "Сохранить", save_changes, 'success')
+            save_btn.pack(side='left', padx=10)
+            cancel_btn = self.create_modern_button(button_frame, "Отмена", dialog.destroy, 'secondary')
+            cancel_btn.pack(side='right', padx=10)
+
+        except Exception as e:
+            self.logger.error(f"Ошибка диалога редактирования номенклатуры: {e}")
+
+    def delete_nomenclature_dialog(self):
+        """Удаление выбранного узла номенклатуры (с подтверждением)"""
+        try:
+            node = self._get_selected_nomenclature_node()
+            if not node:
+                messagebox.showwarning("Внимание", "Выберите элемент для удаления")
+                return
+
+            is_folder = node['item_type'] == 'folder'
+            warning = ""
+            if is_folder:
+                warning = "\n\nВНИМАНИЕ: все вложенные папки и позиции также будут удалены!"
+
+            if not messagebox.askyesno(
+                "Подтверждение удаления",
+                f"Удалить '{node['name']}'?{warning}"
+            ):
+                return
+
+            if db_manager.delete_nomenclature_node(node['id']):
+                self.load_nomenclature_tree()
+            else:
+                messagebox.showerror("Ошибка", "Не удалось удалить элемент")
+
+        except Exception as e:
+            self.logger.error(f"Ошибка удаления узла номенклатуры: {e}")
+
+    def _get_folder_options(self, exclude_id=None):
+        """Построить список (метка, id) для выбора родительской папки в комбобоксах.
+
+        Метки формируются с отступами по уровню вложенности для наглядности.
+        exclude_id позволяет исключить саму редактируемую папку (и не
+        исключает её потомков — защита от цикличности выполняется отдельно
+        в move_nomenclature_node на уровне БД).
+        """
+        nodes = db_manager.get_nomenclature_tree()
+        folders = [n for n in nodes if n['item_type'] == 'folder' and n['id'] != exclude_id]
+
+        children_map = {}
+        for node in folders:
+            children_map.setdefault(node['parent_id'], []).append(node)
+
+        options = [('(корень)', None)]
+
+        def walk(parent_key, depth):
+            for node in children_map.get(parent_key, []):
+                prefix = '—' * depth + ' ' if depth else ''
+                options.append((f"{prefix}{node['name']}", node['id']))
+                walk(node['id'], depth + 1)
+
+        walk(None, 0)
+        return options
+
 
     def create_logs_tab(self):
         """Создание вкладки логов в современном стиле"""

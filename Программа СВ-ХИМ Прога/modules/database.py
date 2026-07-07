@@ -140,6 +140,26 @@ class DatabaseManager:
                 )
             ''')
 
+            # Создание таблицы иерархии номенклатуры (папки/группы + позиции)
+            # Каждый узел может быть либо папкой (item_type='folder', product_code=NULL),
+            # либо позицией номенклатуры, привязанной к продукту и к типу
+            # шаблона карты загрузки (template_type: 'п.', 'Концентрат', '1цех')
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS nomenclature (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    parent_id INTEGER,
+                    name TEXT NOT NULL,
+                    item_type TEXT NOT NULL DEFAULT 'folder',
+                    product_code TEXT,
+                    template_type TEXT,
+                    sort_order INTEGER DEFAULT 0,
+                    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (parent_id) REFERENCES nomenclature(id) ON DELETE CASCADE,
+                    FOREIGN KEY (product_code) REFERENCES products(product_code)
+                )
+            ''')
+
             # Создание индексов для ускорения поиска
             self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_products_code ON products(product_code)')
             self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_recipes_product ON recipes(product_code)')
@@ -150,6 +170,9 @@ class DatabaseManager:
             # ДОБАВЛЕН ИНДЕКС ДЛЯ ТАБЛИЦЫ norms
             self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_norms_product ON norms(product_code)')
             self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_norms_code ON norms(norm_code)')
+            # Индексы для таблицы номенклатуры
+            self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_nomenclature_parent ON nomenclature(parent_id)')
+            self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_nomenclature_product ON nomenclature(product_code)')
 
             self.conn.commit()
             self.logger.info(f"База данных инициализирована: {self.db_path}")
@@ -1252,6 +1275,201 @@ class DatabaseManager:
         except Exception as e:
             self.logger.error(f"Ошибка получения компонентов рецептуры {recipe_number} для продукта {product_code}: {e}")
             return []
+
+    # ===================== МЕТОДЫ ДЛЯ НОМЕНКЛАТУРЫ (ИЕРАРХИЯ/ПАПКИ) =====================
+
+    def get_nomenclature_tree(self) -> List[Dict[str, Any]]:
+        """Получить все узлы номенклатуры (плоским списком) для построения дерева.
+
+        Каждый элемент содержит id, parent_id, name, item_type
+        ('folder'/'item'), product_code, template_type, sort_order.
+        """
+        try:
+            query = """
+                SELECT id, parent_id, name, item_type, product_code, template_type, sort_order
+                FROM nomenclature
+                ORDER BY parent_id IS NOT NULL, parent_id, sort_order, name
+            """
+            self.cursor.execute(query)
+            columns = [c[0] for c in self.cursor.description]
+            return [dict(zip(columns, row)) for row in self.cursor.fetchall()]
+        except Exception as e:
+            self.logger.error(f"Ошибка получения дерева номенклатуры: {e}")
+            return []
+
+    def get_nomenclature_children(self, parent_id: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Получить прямых потомков узла (parent_id=None - корневые узлы)"""
+        try:
+            if parent_id is None:
+                query = """
+                    SELECT id, parent_id, name, item_type, product_code, template_type, sort_order
+                    FROM nomenclature WHERE parent_id IS NULL
+                    ORDER BY sort_order, name
+                """
+                self.cursor.execute(query)
+            else:
+                query = """
+                    SELECT id, parent_id, name, item_type, product_code, template_type, sort_order
+                    FROM nomenclature WHERE parent_id = ?
+                    ORDER BY sort_order, name
+                """
+                self.cursor.execute(query, (parent_id,))
+            columns = [c[0] for c in self.cursor.description]
+            return [dict(zip(columns, row)) for row in self.cursor.fetchall()]
+        except Exception as e:
+            self.logger.error(f"Ошибка получения дочерних узлов номенклатуры (parent_id={parent_id}): {e}")
+            return []
+
+    def get_nomenclature_node(self, node_id: int) -> Optional[Dict[str, Any]]:
+        """Получить один узел номенклатуры по id"""
+        return self._fetch_one(
+            """SELECT id, parent_id, name, item_type, product_code, template_type, sort_order
+               FROM nomenclature WHERE id = ?""",
+            (node_id,)
+        )
+
+    def create_nomenclature_folder(self, name: str, parent_id: Optional[int] = None) -> int:
+        """Создать папку (группу) номенклатуры. Возвращает id новой записи."""
+        try:
+            self.cursor.execute(
+                """INSERT INTO nomenclature (parent_id, name, item_type, product_code, template_type)
+                   VALUES (?, ?, 'folder', NULL, NULL)""",
+                (parent_id, name)
+            )
+            self.conn.commit()
+            new_id = self.cursor.lastrowid
+            self.logger.info(f"Создана папка номенклатуры '{name}' (id={new_id}, parent_id={parent_id})")
+            return new_id
+        except sqlite3.Error as e:
+            self.logger.error(f"Ошибка создания папки номенклатуры '{name}': {e}")
+            raise
+
+    def create_nomenclature_item(self, name: str, parent_id: Optional[int] = None,
+                                  product_code: Optional[str] = None,
+                                  template_type: Optional[str] = None) -> int:
+        """Создать позицию номенклатуры (привязанную к продукту и типу шаблона карты).
+
+        template_type: один из 'п.', 'Концентрат', '1цех' (или None, если ещё не выбран)
+        """
+        try:
+            self.cursor.execute(
+                """INSERT INTO nomenclature (parent_id, name, item_type, product_code, template_type)
+                   VALUES (?, ?, 'item', ?, ?)""",
+                (parent_id, name, product_code, template_type)
+            )
+            self.conn.commit()
+            new_id = self.cursor.lastrowid
+            self.logger.info(
+                f"Создана позиция номенклатуры '{name}' (id={new_id}, parent_id={parent_id}, "
+                f"product_code={product_code}, template_type={template_type})"
+            )
+            return new_id
+        except sqlite3.Error as e:
+            self.logger.error(f"Ошибка создания позиции номенклатуры '{name}': {e}")
+            raise
+
+    def update_nomenclature_node(self, node_id: int, name: str = None,
+                                  product_code: str = None, template_type: str = None,
+                                  parent_id: int = -1) -> bool:
+        """Обновить узел номенклатуры. parent_id=-1 означает "не менять"
+        (т.к. None - валидное значение для перемещения узла в корень).
+        Для product_code/template_type: None означает "не менять", а
+        пустая строка '' означает "сбросить значение в NULL"."""
+        try:
+            updates = []
+            params = []
+            if name is not None:
+                updates.append('name = ?')
+                params.append(name)
+            if product_code is not None:
+                updates.append('product_code = ?')
+                params.append(product_code if product_code != '' else None)
+            if template_type is not None:
+                updates.append('template_type = ?')
+                params.append(template_type if template_type != '' else None)
+            if parent_id != -1:
+                updates.append('parent_id = ?')
+                params.append(parent_id)
+
+            if not updates:
+                return True
+
+            updates.append("updated_date = CURRENT_TIMESTAMP")
+            params.append(node_id)
+
+            query = f"UPDATE nomenclature SET {', '.join(updates)} WHERE id = ?"
+            self.cursor.execute(query, params)
+            self.conn.commit()
+            self.logger.info(f"Обновлён узел номенклатуры id={node_id}")
+            return True
+        except sqlite3.Error as e:
+            self.logger.error(f"Ошибка обновления узла номенклатуры id={node_id}: {e}")
+            return False
+
+    def move_nomenclature_node(self, node_id: int, new_parent_id: Optional[int]) -> bool:
+        """Переместить узел (и всех потомков) в другую папку"""
+        try:
+            if new_parent_id is not None:
+                # Защита от перемещения узла в самого себя или в своего потомка
+                current = new_parent_id
+                visited = set()
+                while current is not None:
+                    if current == node_id:
+                        self.logger.warning("Нельзя переместить папку внутрь самой себя")
+                        return False
+                    if current in visited:
+                        break
+                    visited.add(current)
+                    parent_row = self._fetch_one(
+                        "SELECT parent_id FROM nomenclature WHERE id = ?", (current,)
+                    )
+                    current = parent_row['parent_id'] if parent_row else None
+
+            self.cursor.execute(
+                "UPDATE nomenclature SET parent_id = ?, updated_date = CURRENT_TIMESTAMP WHERE id = ?",
+                (new_parent_id, node_id)
+            )
+            self.conn.commit()
+            return True
+        except sqlite3.Error as e:
+            self.logger.error(f"Ошибка перемещения узла номенклатуры id={node_id}: {e}")
+            return False
+
+    def delete_nomenclature_node(self, node_id: int) -> bool:
+        """Удалить узел номенклатуры вместе со всеми вложенными узлами (рекурсивно)"""
+        try:
+            self.cursor.execute("PRAGMA foreign_keys = ON")
+            # Рекурсивно собираем всех потомков вручную (на случай если
+            # ON DELETE CASCADE не поддерживается текущим соединением)
+            to_delete = [node_id]
+            i = 0
+            while i < len(to_delete):
+                self.cursor.execute(
+                    "SELECT id FROM nomenclature WHERE parent_id = ?", (to_delete[i],)
+                )
+                to_delete.extend(row[0] for row in self.cursor.fetchall())
+                i += 1
+
+            placeholders = ','.join('?' * len(to_delete))
+            self.cursor.execute(
+                f"DELETE FROM nomenclature WHERE id IN ({placeholders})", to_delete
+            )
+            self.conn.commit()
+            self.logger.info(f"Удалён узел номенклатуры id={node_id} (всего удалено: {len(to_delete)})")
+            return True
+        except sqlite3.Error as e:
+            self.logger.error(f"Ошибка удаления узла номенклатуры id={node_id}: {e}")
+            return False
+
+    def get_nomenclature_item_by_product_code(self, product_code: str) -> Optional[Dict[str, Any]]:
+        """Найти позицию номенклатуры, привязанную к продукту (для автоопределения
+        типа шаблона карты загрузки при создании карты)."""
+        return self._fetch_one(
+            """SELECT id, parent_id, name, item_type, product_code, template_type
+               FROM nomenclature WHERE item_type = 'item' AND product_code = ?
+               LIMIT 1""",
+            (product_code,)
+        )
 
 
 # Глобальный экземпляр менеджера базы данных
