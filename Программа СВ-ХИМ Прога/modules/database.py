@@ -154,9 +154,131 @@ class DatabaseManager:
             self.conn.commit()
             self.logger.info(f"База данных инициализирована: {self.db_path}")
 
+            # Чиним записи, повреждённые старой версией import_from_excel()
+            # (до исправления numpy.int64 записывался в БД напрямую и
+            # сохранялся sqlite3 как BLOB вместо текста)
+            self._repair_corrupted_codes()
+
         except sqlite3.Error as e:
             self.logger.error(f"Ошибка инициализации базы данных: {e}")
             raise
+
+    def _repair_corrupted_codes(self):
+        """Восстановить текстовые коды, повреждённые старым багом импорта.
+
+        До исправления в import_from_excel() значения numpy.int64/float64
+        (коды продуктов, компонентов, номера рецептур), полученные из
+        pandas, передавались в sqlite3 напрямую. sqlite3 не умеет
+        сериализовать numpy-скаляры как текст и сохранял их как 8-байтный
+        BLOB (little-endian представление числа), а не как строку с
+        цифрами. Из-за этого в существующих базах пользователей могли
+        остаться "битые" строки вида b'\\xdb\\xb1\\xa9\\x00\\x00\\x00\\x00\\x00'
+        вместо '11121115' — это ломает импорт/экспорт и вывод в интерфейсе
+        (TypeError: unsupported format string passed to bytes.__format__).
+
+        Эта функция при каждом запуске сканирует все текстовые колонки,
+        которые могли пострадать, находит значения типа BLOB длиной 8 байт
+        и преобразует их обратно в строку с числом.
+        """
+        import struct
+
+        columns_to_check = [
+            ('products', 'product_code'),
+            ('recipes', 'product_code'),
+            ('recipes', 'recipe_number'),
+            ('recipe_components', 'component_code'),
+            ('loading_cards', 'product_code'),
+            ('card_components', 'component_code'),
+            ('warehouse', 'component_code'),
+            ('norms', 'product_code'),
+            ('norms', 'norm_code'),
+        ]
+
+        total_repaired = 0
+
+        for table, column in columns_to_check:
+            try:
+                self.cursor.execute(
+                    f'SELECT rowid, "{column}" FROM {table} WHERE typeof("{column}") = "blob"'
+                )
+                broken_rows = self.cursor.fetchall()
+            except sqlite3.Error:
+                # Таблицы/колонки может не быть в старой версии схемы - пропускаем
+                continue
+
+            for rowid, blob_value in broken_rows:
+                fixed_value = self._decode_corrupted_blob(blob_value)
+                if fixed_value is None:
+                    self.logger.warning(
+                        f"Не удалось восстановить повреждённое значение в {table}.{column} "
+                        f"(rowid={rowid}): {blob_value!r}"
+                    )
+                    continue
+
+                try:
+                    self.cursor.execute(
+                        f'UPDATE {table} SET "{column}" = ? WHERE rowid = ?',
+                        (fixed_value, rowid)
+                    )
+                    total_repaired += 1
+                    self.logger.info(
+                        f"Восстановлено значение {table}.{column} (rowid={rowid}): "
+                        f"{blob_value!r} -> '{fixed_value}'"
+                    )
+                except sqlite3.IntegrityError as e:
+                    # Если восстановленное значение конфликтует с уже существующей
+                    # корректной строкой (UNIQUE constraint) - удаляем дубликат-мусор,
+                    # оставляя корректную запись
+                    self.logger.warning(
+                        f"Конфликт при восстановлении {table}.{column} (rowid={rowid}) "
+                        f"-> '{fixed_value}': {e}. Удаляю повреждённую дублирующую запись."
+                    )
+                    try:
+                        self.cursor.execute(f'DELETE FROM {table} WHERE rowid = ?', (rowid,))
+                    except sqlite3.Error:
+                        pass
+
+        if total_repaired:
+            self.conn.commit()
+            self.logger.info(f"Автовосстановление БД: исправлено {total_repaired} повреждённых значений")
+
+    @staticmethod
+    def _decode_corrupted_blob(blob_value) -> Optional[str]:
+        """Попытаться декодировать повреждённый BLOB обратно в строку с числом.
+
+        Поддерживает 8-байтное little-endian представление numpy.int64 -
+        единственный тип, из-за которого старый баг импорта Excel мог
+        записать BLOB вместо текста в sqlite3.
+
+        Примечание: numpy.float64 НЕ вызывает эту проблему, т.к. является
+        подклассом обычного Python float и sqlite3 умеет адаптировать его
+        в текст самостоятельно (проверено эмпирически). Битые BLOB'ы
+        возникают только из numpy.int64 (не являющегося подклассом int),
+        поэтому декодируем именно как 8-байтное целое со знаком.
+        """
+        import struct
+
+        if not isinstance(blob_value, (bytes, bytearray)) or len(blob_value) != 8:
+            return None
+
+        try:
+            as_int = struct.unpack('<q', blob_value)[0]
+            return str(as_int)
+        except struct.error:
+            pass
+
+        # На всякий случай - если целочисленная интерпретация не сработала,
+        # пробуем как float64
+        try:
+            as_float = struct.unpack('<d', blob_value)[0]
+            if as_float == as_float and abs(as_float) < 1e15:
+                if as_float.is_integer():
+                    return str(int(as_float))
+                return str(as_float)
+        except struct.error:
+            pass
+
+        return None
 
     def close(self):
         """Закрытие соединения с базой данных"""
