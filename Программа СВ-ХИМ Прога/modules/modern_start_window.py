@@ -3382,34 +3382,31 @@ class ModernStartWindow:
 
             # Скрываем/показываем поля в зависимости от типа операции
             def on_op_type_change(*args):
-                op = op_type_var.get()
-                if op == 'Списание':
-                    self._inv_source_label.config(text="Откуда (склад/цех):")
-                    source_var.set("Основной склад")
-                    self._inv_dest_label.pack_forget()
-                    dest_entry.pack_forget()
-                    self._inv_dest_label.pack()
-                    dest_entry.pack(side='left', padx=(10, 0))
-                    dest_entry.config(state='disabled')
-                    dest_var.set("— списание —")
-                elif op == 'Приход':
-                    self._inv_source_label.config(text="Поставщик:")
-                    source_var.set("Поставщик")
-                    self._inv_dest_label.pack_forget()
-                    dest_entry.pack_forget()
-                    self._inv_dest_label.pack()
-                    dest_entry.pack(side='left', padx=(10, 0))
-                    dest_entry.config(state='disabled')
-                    dest_var.set("— приход —")
-                else:  # Перемещение
-                    self._inv_source_label.config(text="Откуда (склад/цех):")
-                    source_var.set("Основной склад")
-                    self._inv_dest_label.pack_forget()
-                    dest_entry.pack_forget()
-                    self._inv_dest_label.pack()
-                    dest_entry.pack(side='left', padx=(10, 0))
-                    dest_entry.config(state='normal')
-                    dest_var.set("Цех производства")
+                try:
+                    op = op_type_var.get()
+                    if op == 'Списание':
+                        self._inv_source_label.config(text="Откуда (склад/цех):")
+                        source_var.set("Основной склад")
+                        dest_entry.pack_forget()
+                        self._inv_dest_label.pack_forget()
+                        dest_entry.config(state='disabled')
+                        dest_var.set("— списание —")
+                    elif op == 'Приход':
+                        self._inv_source_label.config(text="Поставщик:")
+                        source_var.set("Поставщик")
+                        dest_entry.pack_forget()
+                        self._inv_dest_label.pack_forget()
+                        dest_entry.config(state='disabled')
+                        dest_var.set("— приход —")
+                    else:  # Перемещение
+                        self._inv_source_label.config(text="Откуда (склад/цех):")
+                        source_var.set("Основной склад")
+                        self._inv_dest_label.pack()
+                        dest_entry.config(state='normal')
+                        dest_entry.pack(side='left', padx=(10, 0))
+                        dest_var.set("Цех производства")
+                except Exception as ex:
+                    self.logger.error(f"Ошибка on_op_type_change: {ex}")
 
             op_combo.bind('<<ComboboxSelected>>', on_op_type_change)
             on_op_type_change()
@@ -3487,39 +3484,39 @@ class ModernStartWindow:
 
             def save_invoice():
                 """Сохранить накладную"""
-                # Собираем данные
-                op_map = {'Списание': 'write_off', 'Перемещение': 'transfer', 'Приход': 'receipt'}
-                operation_type = op_map.get(op_type_var.get(), 'write_off')
-
-                source = source_var.get().strip()
-                dest = dest_var.get().strip()
-                if '—' in dest:
-                    dest = ''
-
-                items_data = []
-                for item in inv_items_tree.get_children():
-                    values = inv_items_tree.item(item, 'values')
-                    if values and values[0] and values[1]:
-                        try:
-                            qty = float(values[2].replace(',', '.'))
-                            if qty > 0:
-                                items_data.append({
-                                    'component_code': values[0],
-                                    'component_name': values[1],
-                                    'quantity': qty,
-                                    'unit': values[3] if values[3] else 'кг'
-                                })
-                        except (ValueError, IndexError):
-                            continue
-
-                if not items_data:
-                    messagebox.showwarning("Внимание", "Добавьте хотя бы одну позицию с количеством > 0")
-                    return
-
-                number = inv_number.get().strip()
-                notes = notes_var.get().strip()
-
                 try:
+                    # Собираем данные
+                    op_map = {'Списание': 'write_off', 'Перемещение': 'transfer', 'Приход': 'receipt'}
+                    operation_type = op_map.get(op_type_var.get(), 'write_off')
+
+                    source = source_var.get().strip()
+                    dest = dest_var.get().strip()
+                    if '—' in dest:
+                        dest = ''
+
+                    items_data = []
+                    for item in inv_items_tree.get_children():
+                        values = inv_items_tree.item(item, 'values')
+                        if values and values[0] and values[1]:
+                            try:
+                                qty = float(values[2].replace(',', '.'))
+                                if qty > 0:
+                                    items_data.append({
+                                        'component_code': values[0],
+                                        'component_name': values[1],
+                                        'quantity': qty,
+                                        'unit': values[3] if values[3] else 'кг'
+                                    })
+                            except (ValueError, IndexError):
+                                continue
+
+                    if not items_data:
+                        messagebox.showwarning("Внимание", "Добавьте хотя бы одну позицию с количеством > 0")
+                        return
+
+                    number = inv_number.get().strip()
+                    notes = notes_var.get().strip()
+
                     invoice_id = db_manager.create_invoice(
                         invoice_number=number,
                         operation_type=operation_type,
@@ -3669,8 +3666,14 @@ class ModernStartWindow:
             def quick_add_and_close():
                 confirm_selection()
 
-            pick_tree.bind('<Double-Button-1>', lambda e: quick_add_and_close())
-            search_entry.bind('<Return>', lambda e: quick_add_and_close())
+            def safe_add_call(event):
+                try:
+                    quick_add_and_close()
+                except Exception as ex:
+                    self.logger.error(f"Ошибка при быстром добавлении: {ex}")
+
+            pick_tree.bind('<Double-Button-1>', safe_add_call)
+            search_entry.bind('<Return>', safe_add_call)
 
             btn_frame = Frame(main, bg=self.colors['background'])
             btn_frame.pack(fill='x')
@@ -3844,11 +3847,17 @@ class ModernStartWindow:
             btn_frame.pack(fill='x', pady=(0, 5))
 
             def export_pdf():
-                self._export_invoice_pdf(invoice, items)
+                try:
+                    self._export_invoice_pdf(invoice, items)
+                except Exception as ex:
+                    self.logger.error(f"Ошибка PDF из деталей: {ex}")
                 dialog.destroy()
 
             def print_inv():
-                self._print_invoice_direct(invoice, items)
+                try:
+                    self._print_invoice_direct(invoice, items)
+                except Exception as ex:
+                    self.logger.error(f"Ошибка печати из деталей: {ex}")
                 dialog.destroy()
 
             self.create_modern_button(btn_frame, "📄 PDF", export_pdf, 'primary').pack(side='left', padx=10)
