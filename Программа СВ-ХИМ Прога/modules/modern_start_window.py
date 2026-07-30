@@ -1,7 +1,7 @@
 # modules/modern_start_window.py
 import tkinter as tk
 from tkinter import (
-    Frame, Label, Listbox, END, StringVar, Entry, Scrollbar,
+    Frame, Label, LabelFrame, Listbox, END, StringVar, Entry, Scrollbar,
     BooleanVar, Text
 )
 from tkinter import messagebox, filedialog
