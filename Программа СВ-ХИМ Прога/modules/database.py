@@ -160,6 +160,35 @@ class DatabaseManager:
                 )
             ''')
 
+            # Создание таблицы требований-накладных
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS requirement_invoices (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    invoice_number TEXT NOT NULL,
+                    operation_type TEXT NOT NULL,
+                    source_location TEXT,
+                    destination_location TEXT,
+                    notes TEXT,
+                    status TEXT DEFAULT 'active',
+                    created_by TEXT DEFAULT 'user',
+                    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            # Создание таблицы позиций накладной
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS invoice_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    invoice_id INTEGER NOT NULL,
+                    component_code TEXT NOT NULL,
+                    component_name TEXT NOT NULL,
+                    quantity REAL NOT NULL,
+                    unit TEXT DEFAULT 'кг',
+                    sort_order INTEGER DEFAULT 0,
+                    FOREIGN KEY (invoice_id) REFERENCES requirement_invoices(id) ON DELETE CASCADE
+                )
+            ''')
+
             # Создание индексов для ускорения поиска
             self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_products_code ON products(product_code)')
             self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_recipes_product ON recipes(product_code)')
@@ -1067,6 +1096,161 @@ class DatabaseManager:
 
         except Exception as e:
             self.logger.error(f"Ошибка экспорта в Excel: {e}")
+            return False
+
+    # ===================== МЕТОДЫ ДЛЯ ТРЕБОВАНИЙ-НАКЛАДНЫХ =====================
+
+    @log_operation("Создание требования-накладной", LogLevel.INFO)
+    def create_invoice(self, invoice_number: str, operation_type: str,
+                       source_location: str = "", destination_location: str = "",
+                       notes: str = "", items: list = None) -> int:
+        """Создать новый документ требования-накладной.
+        
+        operation_type: 'write_off' (списание), 'transfer' (перемещение), 'receipt' (приход)
+        items: список словарей [{'component_code': ..., 'component_name': ..., 'quantity': ...}]
+        
+        Возвращает ID созданной накладной.
+        """
+        try:
+            self.cursor.execute('''
+                INSERT INTO requirement_invoices 
+                (invoice_number, operation_type, source_location, destination_location, notes)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (invoice_number, operation_type, source_location, destination_location, notes))
+            invoice_id = self.cursor.lastrowid
+
+            if items:
+                for idx, item in enumerate(items):
+                    self.cursor.execute('''
+                        INSERT INTO invoice_items 
+                        (invoice_id, component_code, component_name, quantity, unit, sort_order)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ''', (invoice_id, item['component_code'], item['component_name'],
+                          float(item['quantity']), item.get('unit', 'кг'), idx))
+
+                # Обновляем склад в зависимости от типа операции
+                for item in items:
+                    component_code = item['component_code']
+                    quantity = float(item['quantity'])
+
+                    if operation_type == 'write_off':
+                        # Списание: уменьшаем остаток
+                        self.update_warehouse_stock(component_code, -quantity)
+                        self.logger.info(f"Списание со склада: {component_code} - {quantity} кг")
+
+                    elif operation_type == 'receipt':
+                        # Приход: увеличиваем остаток
+                        self.update_warehouse_stock(component_code, quantity)
+                        self.logger.info(f"Приход на склад: {component_code} + {quantity} кг")
+
+                    elif operation_type == 'transfer':
+                        # Перемещение: уменьшаем с источника
+                        self.update_warehouse_stock(component_code, -quantity)
+                        self.logger.info(f"Перемещение со склада: {component_code} - {quantity} кг")
+
+            self.conn.commit()
+            self.logger.info(f"Создана требование-накладная ID={invoice_id}, номер={invoice_number}, тип={operation_type}")
+            return invoice_id
+
+        except Exception as e:
+            self.conn.rollback()
+            self.logger.error(f"Ошибка создания требования-накладной: {e}")
+            raise
+
+    def get_invoices(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Получение списка всех требований-накладных"""
+        try:
+            result = self.execute_query('''
+                SELECT ri.*,
+                       (SELECT COUNT(*) FROM invoice_items ii WHERE ii.invoice_id = ri.id) as item_count,
+                       (SELECT SUM(ii.quantity) FROM invoice_items ii WHERE ii.invoice_id = ri.id) as total_quantity
+                FROM requirement_invoices ri
+                ORDER BY ri.created_date DESC
+                LIMIT ?
+            ''', (limit,))
+            return result if result else []
+        except Exception as e:
+            self.logger.error(f"Ошибка получения списка накладных: {e}")
+            return []
+
+    def get_invoice_details(self, invoice_id: int) -> Optional[Dict[str, Any]]:
+        """Получить детали требования-накладной"""
+        try:
+            result = self.execute_query('''
+                SELECT * FROM requirement_invoices WHERE id = ?
+            ''', (invoice_id,))
+            return result[0] if result else None
+        except Exception as e:
+            self.logger.error(f"Ошибка получения деталей накладной ID={invoice_id}: {e}")
+            return None
+
+    def get_invoice_items(self, invoice_id: int) -> List[Dict[str, Any]]:
+        """Получить позиции требования-накладной"""
+        try:
+            result = self.execute_query('''
+                SELECT * FROM invoice_items
+                WHERE invoice_id = ?
+                ORDER BY sort_order, id
+            ''', (invoice_id,))
+            return result if result else []
+        except Exception as e:
+            self.logger.error(f"Ошибка получения позиций накладной ID={invoice_id}: {e}")
+            return []
+
+    def delete_invoice(self, invoice_id: int) -> bool:
+        """Удалить требование-накладную и её позиции"""
+        try:
+            self.execute_query('DELETE FROM invoice_items WHERE invoice_id = ?', (invoice_id,))
+            self.execute_query('DELETE FROM requirement_invoices WHERE id = ?', (invoice_id,))
+            self.logger.info(f"Удалена накладная ID={invoice_id}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Ошибка удаления накладной ID={invoice_id}: {e}")
+            return False
+
+    def get_next_invoice_number(self) -> str:
+        """Сгенерировать следующий номер накладной"""
+        try:
+            from datetime import datetime
+            year_month = datetime.now().strftime("%Y%m")
+            result = self.execute_query('''
+                SELECT COUNT(*) as cnt FROM requirement_invoices
+                WHERE invoice_number LIKE ?
+            ''', (f'ТН-{year_month}-%',))
+            count = result[0]['cnt'] if result else 0
+            return f'ТН-{year_month}-{count + 1:04d}'
+        except Exception as e:
+            self.logger.error(f"Ошибка генерации номера накладной: {e}")
+            from datetime import datetime
+            return f'ТН-{datetime.now().strftime("%Y%m%d%H%M%S")}'
+
+    def revert_invoice_stock(self, invoice_id: int) -> bool:
+        """Отменить проводку накладной (вернуть остатки как было)"""
+        try:
+            invoice = self.get_invoice_details(invoice_id)
+            if not invoice:
+                return False
+
+            items = self.get_invoice_items(invoice_id)
+            op_type = invoice['operation_type']
+
+            for item in items:
+                qty = float(item['quantity'])
+                if op_type == 'write_off':
+                    self.update_warehouse_stock(item['component_code'], qty)
+                elif op_type == 'receipt':
+                    self.update_warehouse_stock(item['component_code'], -qty)
+                elif op_type == 'transfer':
+                    self.update_warehouse_stock(item['component_code'], qty)
+
+            self.execute_query(
+                "UPDATE requirement_invoices SET status = 'reverted' WHERE id = ?",
+                (invoice_id,)
+            )
+            self.logger.info(f"Отменена проводка накладной ID={invoice_id}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Ошибка отмены проводки накладной ID={invoice_id}: {e}")
             return False
 
     def get_warehouse_items(self) -> List[Dict[str, Any]]:
