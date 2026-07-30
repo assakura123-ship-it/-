@@ -521,6 +521,7 @@ class ModernStartWindow:
             self.create_cards_tab()
             self.create_warehouse_tab()
             self.create_nomenclature_tab()
+            self.create_invoice_tab()
             self.create_logs_tab()
             self.create_import_export_tab()
 
@@ -3128,3 +3129,1007 @@ class ModernStartWindow:
                 self.norms_export_status_label.config(text="✗ Ошибка экспорта норм", fg=self.colors['danger'])
             messagebox.showerror("Ошибка", f"Ошибка экспорта норм:\n{str(e)}")
             self.logger.error(f"Ошибка экспорта норм: {e}")
+
+    # ===================== ВКЛАДКА ТРЕБОВАНИЕ-НАКЛАДНАЯ =====================
+
+    def create_invoice_tab(self):
+        """Создание вкладки требования-накладной"""
+        try:
+            inv_tab = Frame(self.notebook, bg=self.colors['background'])
+            self.notebook.add(inv_tab, text="📄 Требование-накладная")
+
+            container = Frame(inv_tab, bg=self.colors['background'])
+            container.pack(fill='both', expand=True, padx=20, pady=20)
+
+            # ===== ВЕРХНЯЯ ПАНЕЛЬ: КНОПКИ =====
+            header_frame = Frame(container, bg=self.colors['background'])
+            header_frame.pack(fill='x', pady=(0, 5))
+
+            # Заголовок
+            title_frame = Frame(header_frame, bg=self.colors['background'])
+            title_frame.pack(side='left', fill='x', expand=True)
+
+            Label(title_frame, text="📄 Требования-накладные",
+                  font=self.fonts['h2'],
+                  bg=self.colors['background'],
+                  fg=self.colors['on_background']).pack(anchor='w')
+
+            Label(title_frame,
+                  text="Списание, перемещение и приход сырья на склад",
+                  font=self.fonts['caption'],
+                  bg=self.colors['background'],
+                  fg=self.colors['text_muted']).pack(anchor='w', pady=(2, 0))
+
+            # Панель действий справа
+            actions_frame = Frame(header_frame, bg=self.colors['background'])
+            actions_frame.pack(side='right')
+
+            create_btn = ttk.Button(
+                actions_frame,
+                text="➕ Создать накладную",
+                command=self.create_invoice_dialog,
+                style="Modern.TButton",
+                cursor="hand2"
+            )
+            create_btn.pack(side='left', padx=3)
+
+            refresh_btn = ttk.Button(
+                actions_frame,
+                text="🔄",
+                command=self.load_invoices_list,
+                style="Compact.TButton"
+            )
+            refresh_btn.pack(side='left', padx=3)
+
+            ToolTip(create_btn, "Создать новый документ требования-накладной")
+            ToolTip(refresh_btn, "Обновить список накладных")
+
+            # ===== КАРТОЧКА С ТАБЛИЦЕЙ АРХИВА =====
+            table_card = Frame(
+                container,
+                bg=self.colors['surface'],
+                bd=0,
+                highlightbackground=self.colors['border'],
+                highlightthickness=1
+            )
+            table_card.pack(fill='both', expand=True, padx=5, pady=5)
+
+            table_inner = Frame(table_card, bg=self.colors['surface'])
+            table_inner.pack(fill='both', expand=True, padx=1, pady=1)
+
+            columns = ('ID', 'Номер', 'Тип', 'Откуда', 'Куда', 'Позиций', 'Всего, кг', 'Статус', 'Дата')
+            self.invoices_tree = ttk.Treeview(table_inner, columns=columns, show='headings', height=18)
+
+            column_widths = [40, 160, 100, 120, 120, 70, 90, 80, 140]
+            for idx, col in enumerate(columns):
+                self.invoices_tree.heading(col, text=col)
+                self.invoices_tree.column(col, width=column_widths[idx], anchor='center', stretch=True)
+
+            # Настройка отображения типа операции
+            self.invoices_tree.tag_configure('write_off', foreground=self.colors['danger'])
+            self.invoices_tree.tag_configure('transfer', foreground=self.colors['warning'])
+            self.invoices_tree.tag_configure('receipt', foreground=self.colors['success'])
+            self.invoices_tree.tag_configure('active', foreground=self.colors['on_surface'])
+            self.invoices_tree.tag_configure('reverted', foreground=self.colors['text_muted'])
+
+            scrollbar = Scrollbar(table_inner, orient='vertical', command=self.invoices_tree.yview)
+            self.invoices_tree.configure(yscrollcommand=scrollbar.set)
+
+            self.invoices_tree.pack(side='left', fill='both', expand=True)
+            scrollbar.pack(side='right', fill='y')
+
+            self.invoices_tree.bind('<Double-Button-1>', lambda e: self.view_invoice_details())
+
+            # ===== НИЖНЯЯ ПАНЕЛЬ ИНФОРМАЦИИ =====
+            info_frame = Frame(container, bg=self.colors['background'])
+            info_frame.pack(fill='x', pady=(8, 0))
+
+            self.invoice_info_label = Label(
+                info_frame,
+                text="Дважды кликните по накладной для просмотра деталей",
+                font=self.fonts['caption'],
+                bg=self.colors['background'],
+                fg=self.colors['text_muted']
+            )
+            self.invoice_info_label.pack(side='left')
+
+            delete_btn = ttk.Button(
+                info_frame,
+                text="🗑️ Удалить",
+                command=self.delete_selected_invoice,
+                style="Compact.TButton"
+            )
+            delete_btn.pack(side='right', padx=3)
+
+            pdf_btn = ttk.Button(
+                info_frame,
+                text="📄 PDF",
+                command=self.export_invoice_pdf,
+                style="Compact.TButton"
+            )
+            pdf_btn.pack(side='right', padx=3)
+
+            print_btn = ttk.Button(
+                info_frame,
+                text="🖨️ Печать",
+                command=self.print_invoice,
+                style="Compact.TButton"
+            )
+            print_btn.pack(side='right', padx=3)
+
+            ToolTip(pdf_btn, "Экспорт выбранной накладной в PDF")
+            ToolTip(print_btn, "Печать выбранной накладной")
+            ToolTip(delete_btn, "Удалить выбранную накладную")
+
+            # Загружаем список накладных
+            self.load_invoices_list()
+
+            self.logger.debug("Вкладка 'Требование-накладная' создана успешно")
+
+        except Exception as e:
+            self.logger.error(f"Ошибка создания вкладки накладных: {e}")
+            raise
+
+    def load_invoices_list(self):
+        """Загрузить список требований-накладных"""
+        try:
+            if not hasattr(self, 'invoices_tree'):
+                return
+
+            for item in self.invoices_tree.get_children():
+                self.invoices_tree.delete(item)
+
+            invoices = db_manager.get_invoices(limit=200)
+
+            if not invoices:
+                self.invoice_info_label.config(text="Нет сохранённых накладных. Создайте новую.")
+                return
+
+            op_labels = {
+                'write_off': 'Списание',
+                'transfer': 'Перемещение',
+                'receipt': 'Приход'
+            }
+            status_labels = {
+                'active': 'Активна',
+                'reverted': 'Отменена'
+            }
+
+            for inv in invoices:
+                op_type = inv['operation_type']
+                op_label = op_labels.get(op_type, op_type)
+                status = inv['status']
+                status_label = status_labels.get(status, status)
+
+                row_tag = inv['status'] if inv['status'] in ('active', 'reverted') else 'active'
+
+                self.invoices_tree.insert('', 'end', values=(
+                    inv['id'],
+                    inv['invoice_number'],
+                    op_label,
+                    inv.get('source_location') or '',
+                    inv.get('destination_location') or '',
+                    inv.get('item_count', 0),
+                    f"{inv.get('total_quantity', 0):.1f}" if inv.get('total_quantity') else '0',
+                    status_label,
+                    (inv['created_date'][:16] if inv.get('created_date') else '')
+                ), tags=(op_type, inv['status']))
+
+            self.invoice_info_label.config(text=f"Загружено накладных: {len(invoices)}")
+
+        except Exception as e:
+            self.logger.error(f"Ошибка загрузки списка накладных: {e}")
+
+    def create_invoice_dialog(self):
+        """Диалог создания нового требования-накладной"""
+        try:
+            warehouse_items = db_manager.get_warehouse_items()
+            warehouse_map = {w['component_code']: w for w in warehouse_items}
+
+            dialog, main_frame = self.create_dialog(
+                "Создание требования-накладной", 900, 700,
+                header_color=self.colors['primary']
+            )
+            dialog.resizable(True, True)
+
+            # ===== ПАРАМЕТРЫ ДОКУМЕНТА =====
+            params_frame = LabelFrame(main_frame, text="Параметры документа",
+                                      font=self.fonts['body_semibold'],
+                                      padx=15, pady=10, bg=self.colors['background'])
+            params_frame.pack(fill='x', pady=(0, 15))
+
+            # Первая строка: номер и тип операции
+            row1 = Frame(params_frame, bg=self.colors['background'])
+            row1.pack(fill='x', pady=5)
+
+            Label(row1, text="Номер накладной:",
+                  font=self.fonts['body_semibold'],
+                  bg=self.colors['background']).pack(side='left')
+            inv_number = StringVar(value=db_manager.get_next_invoice_number())
+            ttk.Entry(row1, textvariable=inv_number, width=28,
+                      font=self.fonts['body']).pack(side='left', padx=(10, 30))
+
+            Label(row1, text="Тип операции:",
+                  font=self.fonts['body_semibold'],
+                  bg=self.colors['background']).pack(side='left')
+            op_type_var = StringVar(value='write_off')
+            op_combo = ttk.Combobox(row1, textvariable=op_type_var,
+                                    values=['Списание', 'Перемещение', 'Приход'],
+                                    state='readonly', width=18, style="Modern.TCombobox")
+            op_combo.pack(side='left', padx=(10, 0))
+
+            # Вторая строка: откуда/куда (зависит от типа)
+            row2 = Frame(params_frame, bg=self.colors['background'])
+            row2.pack(fill='x', pady=5)
+
+            self._inv_source_label = Label(row2, text="Откуда (склад/цех):",
+                                           font=self.fonts['body'],
+                                           bg=self.colors['background'])
+            self._inv_source_label.pack(side='left')
+            source_var = StringVar(value="Основной склад")
+            source_entry = ttk.Entry(row2, textvariable=source_var, width=28,
+                                     font=self.fonts['body'])
+            source_entry.pack(side='left', padx=(10, 30))
+
+            self._inv_dest_label = Label(row2, text="Куда (цех/склад):",
+                                         font=self.fonts['body'],
+                                         bg=self.colors['background'])
+            self._inv_dest_label.pack(side='left')
+            dest_var = StringVar(value="Цех производства")
+            dest_entry = ttk.Entry(row2, textvariable=dest_var, width=28,
+                                   font=self.fonts['body'])
+            dest_entry.pack(side='left', padx=(10, 0))
+
+            # Скрываем/показываем поля в зависимости от типа операции
+            def on_op_type_change(*args):
+                op = op_type_var.get()
+                if op == 'Списание':
+                    self._inv_source_label.config(text="Откуда (склад/цех):")
+                    source_var.set("Основной склад")
+                    self._inv_dest_label.pack_forget()
+                    dest_entry.pack_forget()
+                    self._inv_dest_label.pack()
+                    dest_entry.pack(side='left', padx=(10, 0))
+                    dest_entry.config(state='disabled')
+                    dest_var.set("— списание —")
+                elif op == 'Приход':
+                    self._inv_source_label.config(text="Поставщик:")
+                    source_var.set("Поставщик")
+                    self._inv_dest_label.pack_forget()
+                    dest_entry.pack_forget()
+                    self._inv_dest_label.pack()
+                    dest_entry.pack(side='left', padx=(10, 0))
+                    dest_entry.config(state='disabled')
+                    dest_var.set("— приход —")
+                else:  # Перемещение
+                    self._inv_source_label.config(text="Откуда (склад/цех):")
+                    source_var.set("Основной склад")
+                    self._inv_dest_label.pack_forget()
+                    dest_entry.pack_forget()
+                    self._inv_dest_label.pack()
+                    dest_entry.pack(side='left', padx=(10, 0))
+                    dest_entry.config(state='normal')
+                    dest_var.set("Цех производства")
+
+            op_combo.bind('<<ComboboxSelected>>', on_op_type_change)
+            on_op_type_change()
+
+            # Примечание
+            Label(params_frame, text="Примечание:",
+                  font=self.fonts['body'],
+                  bg=self.colors['background']).pack(anchor='w', pady=(5, 2))
+            notes_var = StringVar()
+            ttk.Entry(params_frame, textvariable=notes_var, font=self.fonts['body']).pack(fill='x')
+
+            # ===== ТАБЛИЦА ПОЗИЦИЙ =====
+            items_frame = LabelFrame(main_frame, text="Позиции накладной",
+                                     font=self.fonts['body_semibold'],
+                                     padx=10, pady=10, bg=self.colors['background'])
+            items_frame.pack(fill='both', expand=True, pady=(0, 10))
+
+            # Кнопки управления таблицей
+            btn_row = Frame(items_frame, bg=self.colors['background'])
+            btn_row.pack(fill='x', pady=(0, 8))
+
+            add_item_btn = self.create_modern_button(
+                btn_row, "➕ Добавить позицию",
+                lambda: self._add_invoice_item_row(inv_items_tree, warehouse_map),
+                'success', '➕'
+            )
+            add_item_btn.pack(side='left', padx=3)
+
+            remove_item_btn = self.create_modern_button(
+                btn_row, "🗑️ Удалить",
+                lambda: self._remove_invoice_item_row(inv_items_tree),
+                'danger', '🗑️'
+            )
+            remove_item_btn.pack(side='left', padx=3)
+
+            clear_items_btn = self.create_modern_button(
+                btn_row, "Очистить всё",
+                lambda: self._clear_invoice_items(inv_items_tree),
+                'warning', ''
+            )
+            clear_items_btn.pack(side='left', padx=3)
+
+            # Таблица позиций
+            table_container = Frame(items_frame, bg=self.colors['surface'],
+                                    highlightbackground=self.colors['border'],
+                                    highlightthickness=1)
+            table_container.pack(fill='both', expand=True)
+
+            columns = ('Код', 'Наименование', 'Кол-во, кг', 'Ед.')
+            inv_items_tree = ttk.Treeview(table_container, columns=columns,
+                                           show='headings', height=10)
+
+            col_widths = [140, 350, 120, 60]
+            for idx, col in enumerate(columns):
+                inv_items_tree.heading(col, text=col)
+                inv_items_tree.column(col, width=col_widths[idx], anchor='center')
+
+            tree_scrollbar = Scrollbar(table_container, orient='vertical',
+                                       command=inv_items_tree.yview)
+            inv_items_tree.configure(yscrollcommand=tree_scrollbar.set)
+
+            inv_items_tree.pack(side='left', fill='both', expand=True)
+            tree_scrollbar.pack(side='right', fill='y')
+
+            # Двойной клик для редактирования количества
+            inv_items_tree.bind('<Double-Button-1>',
+                                lambda e: self._edit_invoice_item_quantity(e, inv_items_tree))
+
+            # Добавляем первую пустую строку
+            self._add_invoice_item_row(inv_items_tree, warehouse_map)
+
+            # ===== НИЖНИЕ КНОПКИ =====
+            button_frame = Frame(main_frame, bg=self.colors['background'])
+            button_frame.pack(fill='x', pady=(0, 5))
+
+            def save_invoice():
+                """Сохранить накладную"""
+                # Собираем данные
+                op_map = {'Списание': 'write_off', 'Перемещение': 'transfer', 'Приход': 'receipt'}
+                operation_type = op_map.get(op_type_var.get(), 'write_off')
+
+                source = source_var.get().strip()
+                dest = dest_var.get().strip()
+                if '—' in dest:
+                    dest = ''
+
+                items_data = []
+                for item in inv_items_tree.get_children():
+                    values = inv_items_tree.item(item, 'values')
+                    if values and values[0] and values[1]:
+                        try:
+                            qty = float(values[2].replace(',', '.'))
+                            if qty > 0:
+                                items_data.append({
+                                    'component_code': values[0],
+                                    'component_name': values[1],
+                                    'quantity': qty,
+                                    'unit': values[3] if values[3] else 'кг'
+                                })
+                        except (ValueError, IndexError):
+                            continue
+
+                if not items_data:
+                    messagebox.showwarning("Внимание", "Добавьте хотя бы одну позицию с количеством > 0")
+                    return
+
+                number = inv_number.get().strip()
+                notes = notes_var.get().strip()
+
+                try:
+                    invoice_id = db_manager.create_invoice(
+                        invoice_number=number,
+                        operation_type=operation_type,
+                        source_location=source,
+                        destination_location=dest,
+                        notes=notes,
+                        items=items_data
+                    )
+                    dialog.destroy()
+                    self.load_invoices_list()
+                    self.load_warehouse_data()
+
+                    op_name = op_type_var.get()
+                    messagebox.showinfo("Успех",
+                                        f"Требование-накладная №{number} создана!\n\n"
+                                        f"Тип: {op_name}\n"
+                                        f"Позиций: {len(items_data)}\n"
+                                        f"ID документа: {invoice_id}")
+                    self.logger.info(f"Создана накладная №{number}, тип={operation_type}, позиций={len(items_data)}")
+
+                except Exception as e:
+                    messagebox.showerror("Ошибка", f"Не удалось создать накладную:\n{str(e)}")
+                    self.logger.error(f"Ошибка создания накладной: {e}")
+
+            save_btn = self.create_modern_button(button_frame, "💾 Сохранить", save_invoice, 'success')
+            save_btn.pack(side='left', padx=10)
+
+            cancel_btn = self.create_modern_button(button_frame, "Отмена", dialog.destroy, 'secondary')
+            cancel_btn.pack(side='right', padx=10)
+
+            self.logger.info("Открыт диалог создания накладной")
+
+        except Exception as e:
+            self.logger.error(f"Ошибка открытия диалога накладной: {e}")
+            messagebox.showerror("Ошибка", f"Не удалось открыть диалог:\n{str(e)}")
+
+    def _add_invoice_item_row(self, tree, warehouse_map):
+        """Добавить строку в таблицу позиций накладной"""
+        try:
+            # Создаём временное диалоговое окно выбора компонента
+            dialog, main = self.create_dialog(
+                "Добавить позицию", 700, 500,
+                header_color=self.colors['primary']
+            )
+
+            Label(main, text="Выберите компонент со склада или введите вручную:",
+                  font=self.fonts['body'],
+                  bg=self.colors['background']).pack(anchor='w', pady=(0, 10))
+
+            # Поиск
+            search_frame = Frame(main, bg=self.colors['background'])
+            search_frame.pack(fill='x', pady=(0, 10))
+
+            Label(search_frame, text="Поиск:",
+                  font=self.fonts['body'],
+                  bg=self.colors['background']).pack(side='left')
+            search_var = StringVar()
+            search_entry = ttk.Entry(search_frame, textvariable=search_var,
+                                     width=30, font=self.fonts['body'])
+            search_entry.pack(side='left', padx=(5, 0))
+
+            # Таблица компонентов склада
+            table_frame = Frame(main, bg=self.colors['surface'],
+                                highlightbackground=self.colors['border'],
+                                highlightthickness=1)
+            table_frame.pack(fill='both', expand=True, pady=(0, 10))
+
+            columns = ('Код', 'Наименование', 'Остаток, кг', 'Ед.')
+            pick_tree = ttk.Treeview(table_frame, columns=columns,
+                                     show='headings', height=12)
+            col_widths = [120, 350, 100, 60]
+            for idx, col in enumerate(columns):
+                pick_tree.heading(col, text=col)
+                pick_tree.column(col, width=col_widths[idx], anchor='center')
+
+            scroll = Scrollbar(table_frame, orient='vertical', command=pick_tree.yview)
+            pick_tree.configure(yscrollcommand=scroll.set)
+            pick_tree.pack(side='left', fill='both', expand=True)
+            scroll.pack(side='right', fill='y')
+
+            # Заполняем таблицу
+            all_items = list(warehouse_map.values())
+            for item in all_items:
+                pick_tree.insert('', 'end', values=(
+                    item['component_code'],
+                    item['component_name'],
+                    f"{item['current_stock']:.1f}",
+                    item.get('unit', 'кг')
+                ))
+
+            # Фильтрация
+            def filter_items(*args):
+                text = search_var.get().lower().strip()
+                for item in pick_tree.get_children():
+                    pick_tree.delete(item)
+                for w_item in all_items:
+                    if (not text or
+                            text in w_item['component_code'].lower() or
+                            text in w_item['component_name'].lower()):
+                        pick_tree.insert('', 'end', values=(
+                            w_item['component_code'],
+                            w_item['component_name'],
+                            f"{w_item['current_stock']:.1f}",
+                            w_item.get('unit', 'кг')
+                        ))
+
+            search_var.trace('w', filter_items)
+
+            # Поле для ручного ввода количества
+            qty_frame = Frame(main, bg=self.colors['background'])
+            qty_frame.pack(fill='x', pady=(0, 10))
+
+            Label(qty_frame, text="Количество, кг:",
+                  font=self.fonts['body_semibold'],
+                  bg=self.colors['background']).pack(side='left')
+            qty_var = StringVar(value="100")
+            qty_entry = ttk.Entry(qty_frame, textvariable=qty_var,
+                                  width=15, font=self.fonts['body'])
+            qty_entry.pack(side='left', padx=(10, 0))
+
+            def confirm_selection():
+                selection = pick_tree.selection()
+                if selection:
+                    values = pick_tree.item(selection[0], 'values')
+                    code = values[0]
+                    name = values[1]
+                else:
+                    code = search_var.get().strip()
+                    name = code
+                    if not code:
+                        messagebox.showwarning("Внимание",
+                                               "Выберите компонент из списка или введите код в поиске")
+                        return
+
+                try:
+                    qty = float(qty_var.get().replace(',', '.'))
+                except ValueError:
+                    qty = 0
+
+                if qty <= 0:
+                    messagebox.showwarning("Внимание", "Введите количество больше 0")
+                    return
+
+                tree.insert('', 'end', values=(code, name, f"{qty:.1f}", 'кг'))
+                dialog.destroy()
+
+            def quick_add_and_close():
+                confirm_selection()
+
+            pick_tree.bind('<Double-Button-1>', lambda e: quick_add_and_close())
+            search_entry.bind('<Return>', lambda e: quick_add_and_close())
+
+            btn_frame = Frame(main, bg=self.colors['background'])
+            btn_frame.pack(fill='x')
+
+            self.create_modern_button(btn_frame, "✅ Добавить",
+                                      confirm_selection, 'success').pack(side='left', padx=10)
+            self.create_modern_button(btn_frame, "Отмена",
+                                      dialog.destroy, 'secondary').pack(side='right', padx=10)
+
+        except Exception as e:
+            self.logger.error(f"Ошибка добавления позиции: {e}")
+
+    def _remove_invoice_item_row(self, tree):
+        """Удалить выбранные строки из таблицы позиций"""
+        selection = tree.selection()
+        if not selection:
+            messagebox.showwarning("Внимание", "Выберите позиции для удаления")
+            return
+        for item in selection:
+            tree.delete(item)
+
+    def _clear_invoice_items(self, tree):
+        """Очистить все строки таблицы позиций"""
+        for item in tree.get_children():
+            tree.delete(item)
+
+    def _edit_invoice_item_quantity(self, event, tree):
+        """Редактирование количества через двойной клик"""
+        item = tree.identify_row(event.y)
+        column = tree.identify_column(event.x)
+        if not item or column != '#3':  # Только колонка количества
+            return
+
+        values = tree.item(item, 'values')
+        if not values:
+            return
+
+        current_qty = values[2]
+
+        # Создаём простой диалог редактирования
+        edit_dialog = tk.Toplevel(tree.winfo_toplevel())
+        edit_dialog.title("Изменить количество")
+        edit_dialog.geometry("300x150")
+        edit_dialog.configure(bg=self.colors['background'])
+        edit_dialog.transient(tree.winfo_toplevel())
+        edit_dialog.grab_set()
+        edit_dialog.resizable(False, False)
+
+        edit_dialog.update_idletasks()
+        x = (edit_dialog.winfo_screenwidth() // 2) - 150
+        y = (edit_dialog.winfo_screenheight() // 2) - 75
+        edit_dialog.geometry(f"+{x}+{y}")
+
+        frame = Frame(edit_dialog, bg=self.colors['background'], padx=20, pady=20)
+        frame.pack(fill='both', expand=True)
+
+        Label(frame, text=f"Количество для {values[0]} ({values[1]}):",
+              font=self.fonts['body'],
+              bg=self.colors['background']).pack(anchor='w')
+
+        new_qty_var = StringVar(value=current_qty)
+        ttk.Entry(frame, textvariable=new_qty_var,
+                  font=self.fonts['body'], width=20).pack(fill='x', pady=10)
+
+        def save_qty():
+            try:
+                qty = float(new_qty_var.get().replace(',', '.'))
+                new_values = list(values)
+                new_values[2] = f"{qty:.1f}"
+                tree.item(item, values=tuple(new_values))
+                edit_dialog.destroy()
+            except ValueError:
+                messagebox.showwarning("Внимание", "Введите корректное число")
+
+        btn_frame = Frame(frame, bg=self.colors['background'])
+        btn_frame.pack(fill='x', pady=(10, 0))
+
+        self.create_modern_button(btn_frame, "OK", save_qty, 'success').pack(side='left', padx=5)
+        self.create_modern_button(btn_frame, "Отмена", edit_dialog.destroy, 'secondary').pack(side='right', padx=5)
+
+    def view_invoice_details(self):
+        """Просмотр деталей выбранной накладной"""
+        try:
+            selection = self.invoices_tree.selection()
+            if not selection:
+                messagebox.showwarning("Внимание", "Выберите накладную из списка")
+                return
+
+            values = self.invoices_tree.item(selection[0], 'values')
+            invoice_id = int(values[0])
+
+            invoice = db_manager.get_invoice_details(invoice_id)
+            if not invoice:
+                messagebox.showerror("Ошибка", "Накладная не найдена")
+                return
+
+            items = db_manager.get_invoice_items(invoice_id)
+
+            # Создаем диалог просмотра
+            op_labels = {'write_off': 'Списание', 'transfer': 'Перемещение', 'receipt': 'Приход'}
+            op_label = op_labels.get(invoice['operation_type'], invoice['operation_type'])
+
+            status_labels = {'active': 'Активна', 'reverted': 'Отменена'}
+            status_label = status_labels.get(invoice['status'], invoice['status'])
+
+            dialog, main_frame = self.create_dialog(
+                f"Накладная №{invoice['invoice_number']}", 800, 600,
+                header_color=self.colors['primary']
+            )
+            dialog.resizable(True, True)
+
+            # Информация о документе
+            info_frame = LabelFrame(main_frame, text="Информация о документе",
+                                    font=self.fonts['body_semibold'],
+                                    padx=15, pady=10, bg=self.colors['background'])
+            info_frame.pack(fill='x', pady=(0, 15))
+
+            info_text = (
+                f"Номер: {invoice['invoice_number']}\n"
+                f"Тип операции: {op_label}\n"
+                f"Откуда: {invoice.get('source_location') or '—'}\n"
+                f"Куда: {invoice.get('destination_location') or '—'}\n"
+                f"Статус: {status_label}\n"
+                f"Примечание: {invoice.get('notes') or '—'}\n"
+                f"Дата создания: {invoice['created_date']}"
+            )
+            Label(info_frame, text=info_text,
+                  font=self.fonts['body'],
+                  bg=self.colors['background'],
+                  fg=self.colors['on_surface'],
+                  justify='left').pack(anchor='w')
+
+            # Таблица позиций
+            items_frame = LabelFrame(main_frame, text="Позиции",
+                                     font=self.fonts['body_semibold'],
+                                     padx=10, pady=10, bg=self.colors['background'])
+            items_frame.pack(fill='both', expand=True, pady=(0, 10))
+
+            columns = ('№', 'Код', 'Наименование', 'Количество, кг', 'Ед.')
+            detail_tree = ttk.Treeview(items_frame, columns=columns,
+                                       show='headings', height=12)
+            col_widths = [40, 140, 350, 120, 60]
+            for idx, col in enumerate(columns):
+                detail_tree.heading(col, text=col)
+                detail_tree.column(col, width=col_widths[idx], anchor='center')
+
+            scroll = Scrollbar(items_frame, orient='vertical', command=detail_tree.yview)
+            detail_tree.configure(yscrollcommand=scroll.set)
+            detail_tree.pack(side='left', fill='both', expand=True)
+            scroll.pack(side='right', fill='y')
+
+            total_qty = 0
+            for i, item in enumerate(items, 1):
+                detail_tree.insert('', 'end', values=(
+                    str(i),
+                    item['component_code'],
+                    item['component_name'],
+                    f"{item['quantity']:.1f}",
+                    item.get('unit', 'кг')
+                ))
+                total_qty += item['quantity']
+
+            # Итоговая строка
+            detail_tree.insert('', 'end', values=(
+                '', 'ИТОГО:', f"{len(items)} позиций",
+                f"{total_qty:.1f}", 'кг'
+            ))
+
+            # Кнопки
+            btn_frame = Frame(main_frame, bg=self.colors['background'])
+            btn_frame.pack(fill='x', pady=(0, 5))
+
+            def export_pdf():
+                self._export_invoice_pdf(invoice, items)
+                dialog.destroy()
+
+            def print_inv():
+                self._print_invoice_direct(invoice, items)
+                dialog.destroy()
+
+            self.create_modern_button(btn_frame, "📄 PDF", export_pdf, 'primary').pack(side='left', padx=10)
+            self.create_modern_button(btn_frame, "🖨️ Печать", print_inv, 'secondary').pack(side='left', padx=10)
+            self.create_modern_button(btn_frame, "Закрыть", dialog.destroy, 'secondary').pack(side='right', padx=10)
+
+        except Exception as e:
+            self.logger.error(f"Ошибка просмотра накладной: {e}")
+            messagebox.showerror("Ошибка", f"Не удалось открыть детали:\n{str(e)}")
+
+    def delete_selected_invoice(self):
+        """Удалить выбранную накладную"""
+        try:
+            selection = self.invoices_tree.selection()
+            if not selection:
+                messagebox.showwarning("Внимание", "Выберите накладную для удаления")
+                return
+
+            values = self.invoices_tree.item(selection[0], 'values')
+            invoice_id = int(values[0])
+            invoice_number = values[1]
+
+            if not messagebox.askyesno(
+                "Подтверждение",
+                f"Удалить накладную №{invoice_number}?\n\n"
+                "Это действие нельзя отменить."
+            ):
+                return
+
+            if db_manager.delete_invoice(invoice_id):
+                self.load_invoices_list()
+                messagebox.showinfo("Успех", f"Накладная №{invoice_number} удалена")
+                self.logger.info(f"Удалена накладная №{invoice_number}")
+            else:
+                messagebox.showerror("Ошибка", "Не удалось удалить накладную")
+
+        except Exception as e:
+            self.logger.error(f"Ошибка удаления накладной: {e}")
+            messagebox.showerror("Ошибка", f"Не удалось удалить накладную:\n{str(e)}")
+
+    def export_invoice_pdf(self):
+        """Экспорт выбранной накладной в PDF"""
+        try:
+            selection = self.invoices_tree.selection()
+            if not selection:
+                messagebox.showwarning("Внимание", "Выберите накладную из списка")
+                return
+
+            values = self.invoices_tree.item(selection[0], 'values')
+            invoice_id = int(values[0])
+
+            invoice = db_manager.get_invoice_details(invoice_id)
+            if not invoice:
+                messagebox.showerror("Ошибка", "Накладная не найдена")
+                return
+
+            items = db_manager.get_invoice_items(invoice_id)
+            self._export_invoice_pdf(invoice, items)
+
+        except Exception as e:
+            self.logger.error(f"Ошибка экспорта PDF: {e}")
+            messagebox.showerror("Ошибка", f"Не удалось создать PDF:\n{str(e)}")
+
+    def _export_invoice_pdf(self, invoice, items):
+        """Создать PDF файл накладной"""
+        try:
+            from reportlab.lib.pagesizes import A4
+            from reportlab.pdfgen import canvas
+            from reportlab.lib.units import mm
+            from reportlab.lib.colors import black, Color
+
+            from tkinter import filedialog
+
+            default_filename = f"накладная_{invoice['invoice_number']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+
+            filename = filedialog.asksaveasfilename(
+                title="Сохранить накладную как PDF",
+                initialdir=".",
+                initialfile=default_filename,
+                defaultextension=".pdf",
+                filetypes=[("PDF файлы", "*.pdf"), ("Все файлы", "*.*")]
+            )
+            if not filename:
+                return
+
+            c = canvas.Canvas(filename, pagesize=A4)
+            width, height = A4
+
+            op_labels = {'write_off': 'СПИСАНИЕ', 'transfer': 'ПЕРЕМЕЩЕНИЕ', 'receipt': 'ПРИХОД'}
+            op_label = op_labels.get(invoice['operation_type'], invoice['operation_type'].upper())
+
+            # Заголовок
+            c.setFont("Helvetica-Bold", 16)
+            c.drawString(30 * mm, height - 25 * mm, f"ТРЕБОВАНИЕ-НАКЛАДНАЯ №{invoice['invoice_number']}")
+
+            c.setFont("Helvetica-Bold", 14)
+            c.drawString(30 * mm, height - 35 * mm, f"Тип операции: {op_label}")
+
+            # Линия
+            c.line(30 * mm, height - 40 * mm, 180 * mm, height - 40 * mm)
+
+            # Информация
+            c.setFont("Helvetica", 10)
+            y = height - 48 * mm
+
+            c.drawString(30 * mm, y, f"Откуда: {invoice.get('source_location') or '—'}")
+            c.drawString(120 * mm, y, f"Куда: {invoice.get('destination_location') or '—'}")
+            y -= 6 * mm
+
+            c.drawString(30 * mm, y, f"Дата: {invoice['created_date'][:16] if invoice.get('created_date') else '—'}")
+            c.drawString(120 * mm, y, f"Статус: {'Активна' if invoice['status'] == 'active' else 'Отменена'}")
+
+            if invoice.get('notes'):
+                y -= 6 * mm
+                c.drawString(30 * mm, y, f"Примечание: {invoice['notes']}")
+
+            # Таблица позиций
+            y -= 10 * mm
+            c.setFont("Helvetica-Bold", 9)
+            c.drawString(10 * mm, y, "№")
+            c.drawString(30 * mm, y, "Код")
+            c.drawString(80 * mm, y, "Наименование")
+            c.drawString(155 * mm, y, "Кол-во, кг")
+
+            c.line(10 * mm, y - 1 * mm, 190 * mm, y - 1 * mm)
+            y -= 6 * mm
+
+            c.setFont("Helvetica", 9)
+            total_qty = 0
+            for i, item in enumerate(items, 1):
+                if y < 30 * mm:
+                    c.showPage()
+                    y = height - 30 * mm
+                    c.setFont("Helvetica", 9)
+
+                c.drawString(12 * mm, y, str(i))
+                c.drawString(30 * mm, y, item['component_code'])
+                name = item['component_name']
+                if len(name) > 30:
+                    name = name[:27] + "..."
+                c.drawString(80 * mm, y, name)
+                qty = float(item['quantity'])
+                c.drawRightString(185 * mm, y, f"{qty:.1f}")
+                total_qty += qty
+                y -= 5 * mm
+
+            # Итоговая строка
+            c.line(10 * mm, y - 1 * mm, 190 * mm, y - 1 * mm)
+            y -= 6 * mm
+            c.setFont("Helvetica-Bold", 10)
+            c.drawString(80 * mm, y, f"ИТОГО: {len(items)} позиций")
+            c.drawRightString(185 * mm, y, f"{total_qty:.1f} кг")
+
+            # Подписи
+            y -= 20 * mm
+            c.setFont("Helvetica", 10)
+            c.drawString(30 * mm, y, "Отпустил: _________________")
+            c.drawString(120 * mm, y, "Получил: _________________")
+            y -= 6 * mm
+            c.drawString(30 * mm, y, f"Дата: {datetime.now().strftime('%d.%m.%Y')}")
+
+            c.save()
+
+            messagebox.showinfo("Успех", f"PDF сохранён:\n{filename}")
+            self.logger.info(f"PDF накладной создан: {filename}")
+
+        except Exception as e:
+            self.logger.error(f"Ошибка создания PDF накладной: {e}")
+            messagebox.showerror("Ошибка", f"Не удалось создать PDF:\n{str(e)}")
+
+    def print_invoice(self):
+        """Печать выбранной накладной"""
+        try:
+            selection = self.invoices_tree.selection()
+            if not selection:
+                messagebox.showwarning("Внимание", "Выберите накладную из списка")
+                return
+
+            values = self.invoices_tree.item(selection[0], 'values')
+            invoice_id = int(values[0])
+
+            invoice = db_manager.get_invoice_details(invoice_id)
+            if not invoice:
+                messagebox.showerror("Ошибка", "Накладная не найдена")
+                return
+
+            items = db_manager.get_invoice_items(invoice_id)
+            self._print_invoice_direct(invoice, items)
+
+        except Exception as e:
+            self.logger.error(f"Ошибка печати накладной: {e}")
+            messagebox.showerror("Ошибка", f"Не удалось распечатать:\n{str(e)}")
+
+    def _print_invoice_direct(self, invoice, items):
+        """Печать накладной через системный PDF viewer"""
+        try:
+            import tempfile
+            import subprocess
+            import os
+
+            # Сохраняем во временный PDF и открываем
+            with tempfile.NamedTemporaryFile(
+                suffix='.pdf', prefix=f'invoice_{invoice["invoice_number"]}_',
+                delete=False
+            ) as tmp:
+                tmp_path = tmp.name
+
+            # Создаём PDF во временный файл
+            from reportlab.lib.pagesizes import A4
+            from reportlab.pdfgen import canvas
+            from reportlab.lib.units import mm
+
+            c = canvas.Canvas(tmp_path, pagesize=A4)
+            width, height = A4
+
+            op_labels = {'write_off': 'СПИСАНИЕ', 'transfer': 'ПЕРЕМЕЩЕНИЕ', 'receipt': 'ПРИХОД'}
+            op_label = op_labels.get(invoice['operation_type'], invoice['operation_type'].upper())
+
+            c.setFont("Helvetica-Bold", 16)
+            c.drawString(30 * mm, height - 25 * mm, f"ТРЕБОВАНИЕ-НАКЛАДНАЯ №{invoice['invoice_number']}")
+            c.setFont("Helvetica-Bold", 14)
+            c.drawString(30 * mm, height - 35 * mm, f"Тип операции: {op_label}")
+            c.line(30 * mm, height - 40 * mm, 180 * mm, height - 40 * mm)
+
+            c.setFont("Helvetica", 10)
+            y = height - 48 * mm
+            c.drawString(30 * mm, y, f"Откуда: {invoice.get('source_location') or '—'}")
+            c.drawString(120 * mm, y, f"Куда: {invoice.get('destination_location') or '—'}")
+            y -= 6 * mm
+            c.drawString(30 * mm, y, f"Дата: {invoice['created_date'][:16] if invoice.get('created_date') else '—'}")
+
+            y -= 10 * mm
+            c.setFont("Helvetica-Bold", 9)
+            c.drawString(10 * mm, y, "№")
+            c.drawString(30 * mm, y, "Код")
+            c.drawString(80 * mm, y, "Наименование")
+            c.drawString(155 * mm, y, "Кол-во, кг")
+            c.line(10 * mm, y - 1 * mm, 190 * mm, y - 1 * mm)
+            y -= 6 * mm
+
+            c.setFont("Helvetica", 9)
+            total_qty = 0
+            for i, item in enumerate(items, 1):
+                if y < 30 * mm:
+                    c.showPage()
+                    y = height - 30 * mm
+                    c.setFont("Helvetica", 9)
+                c.drawString(12 * mm, y, str(i))
+                c.drawString(30 * mm, y, item['component_code'])
+                name = item['component_name']
+                if len(name) > 30:
+                    name = name[:27] + "..."
+                c.drawString(80 * mm, y, name)
+                qty = float(item['quantity'])
+                c.drawRightString(185 * mm, y, f"{qty:.1f}")
+                total_qty += qty
+                y -= 5 * mm
+
+            c.line(10 * mm, y - 1 * mm, 190 * mm, y - 1 * mm)
+            y -= 6 * mm
+            c.setFont("Helvetica-Bold", 10)
+            c.drawString(80 * mm, y, f"ИТОГО: {len(items)} позиций")
+            c.drawRightString(185 * mm, y, f"{total_qty:.1f} кг")
+
+            y -= 20 * mm
+            c.setFont("Helvetica", 10)
+            c.drawString(30 * mm, y, "Отпустил: _________________")
+            c.drawString(120 * mm, y, "Получил: _________________")
+            y -= 6 * mm
+            c.drawString(30 * mm, y, f"Дата: {datetime.now().strftime('%d.%m.%Y')}")
+
+            c.save()
+
+            # Открываем PDF в системном просмотрщике
+            if os.name == 'nt':  # Windows
+                os.startfile(tmp_path)
+            elif os.name == 'posix':  # Linux/Mac
+                subprocess.run(['xdg-open', tmp_path], check=False)
+
+            self.logger.info(f"Накладная отправлена на печать: {invoice['invoice_number']}")
+
+        except Exception as e:
+            self.logger.error(f"Ошибка печати накладной: {e}")
+            messagebox.showerror("Ошибка", f"Не удалось распечатать:\n{str(e)}")
