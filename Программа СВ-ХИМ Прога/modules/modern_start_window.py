@@ -3548,27 +3548,65 @@ class ModernStartWindow:
                         return
 
                     number = inv_number.get().strip()
+                    if not number:
+                        messagebox.showwarning("Внимание", "Введите номер накладной")
+                        return
+
                     notes = notes_var.get().strip()
 
-                    invoice_id = db_manager.create_invoice(
-                        invoice_number=number,
-                        operation_type=operation_type,
-                        source_location=source,
-                        destination_location=dest,
-                        notes=notes,
-                        items=items_data
-                    )
-                    self.safe_destroy_dialog(dialog)
+                    try:
+                        invoice_id = db_manager.create_invoice(
+                            invoice_number=number,
+                            operation_type=operation_type,
+                            source_location=source,
+                            destination_location=dest,
+                            notes=notes,
+                            items=items_data
+                        )
+                    except ValueError as ve:
+                        # Недостаточно остатков на складе для списания/перемещения —
+                        # понятное сообщение пользователю, накладная НЕ создаётся
+                        messagebox.showerror("Недостаточно остатков", str(ve))
+                        self.logger.warning(f"Накладная №{number} не создана: {ve}")
+                        return
+
                     self.load_invoices_list()
                     self.load_warehouse_data()
 
                     op_name = op_type_var.get()
-                    messagebox.showinfo("Успех",
-                                        f"Требование-накладная №{number} создана!\n\n"
-                                        f"Тип: {op_name}\n"
-                                        f"Позиций: {len(items_data)}\n"
-                                        f"ID документа: {invoice_id}")
                     self.logger.info(f"Создана накладная №{number}, тип={operation_type}, позиций={len(items_data)}")
+
+                    # ---- Автосохранение PDF-бланка накладной ----
+                    pdf_path = None
+                    try:
+                        from modules.invoice_pdf import (
+                            generate_invoice_pdf, default_invoice_filename, get_invoices_dir
+                        )
+                        invoice = db_manager.get_invoice_details(invoice_id)
+                        saved_items = db_manager.get_invoice_items(invoice_id)
+                        invoices_dir = get_invoices_dir()
+                        pdf_path = os.path.join(invoices_dir, default_invoice_filename(invoice))
+                        if not generate_invoice_pdf(invoice, saved_items, pdf_path):
+                            pdf_path = None
+                    except Exception as pdf_err:
+                        self.logger.error(f"Не удалось автоматически сохранить PDF накладной: {pdf_err}")
+                        pdf_path = None
+
+                    self.safe_destroy_dialog(dialog)
+
+                    if pdf_path:
+                        messagebox.showinfo("Успех",
+                                            f"Требование-накладная №{number} создана!\n\n"
+                                            f"Тип: {op_name}\n"
+                                            f"Позиций: {len(items_data)}\n"
+                                            f"ID документа: {invoice_id}\n\n"
+                                            f"Бланк PDF сохранён:\n{pdf_path}")
+                    else:
+                        messagebox.showwarning("Накладная создана, но PDF не сохранён",
+                                            f"Требование-накладная №{number} создана (ID: {invoice_id}),\n"
+                                            f"однако автоматически сохранить PDF-бланк не удалось.\n"
+                                            f"Вы можете экспортировать PDF вручную кнопкой «📄 PDF» "
+                                            f"в списке накладных.")
 
                 except Exception as e:
                     messagebox.showerror("Ошибка", f"Не удалось создать накладную:\n{str(e)}")
@@ -4012,17 +4050,26 @@ class ModernStartWindow:
             values = self.invoices_tree.item(selection[0], 'values')
             invoice_id = int(values[0])
             invoice_number = values[1]
+            status_label = values[7] if len(values) > 7 else ''
+
+            revert_note = (
+                "Остатки на складе будут автоматически возвращены к состоянию "
+                "до проведения этой накладной.\n\n"
+                if status_label == 'Активна' else ""
+            )
 
             if not messagebox.askyesno(
                 "Подтверждение",
                 f"Удалить накладную №{invoice_number}?\n\n"
+                f"{revert_note}"
                 "Это действие нельзя отменить."
             ):
                 return
 
             if db_manager.delete_invoice(invoice_id):
                 self.load_invoices_list()
-                messagebox.showinfo("Успех", f"Накладная №{invoice_number} удалена")
+                self.load_warehouse_data()
+                messagebox.showinfo("Успех", f"Накладная №{invoice_number} удалена, остатки склада восстановлены")
                 self.logger.info(f"Удалена накладная №{invoice_number}")
             else:
                 messagebox.showerror("Ошибка", "Не удалось удалить накладную")
@@ -4032,7 +4079,7 @@ class ModernStartWindow:
             messagebox.showerror("Ошибка", f"Не удалось удалить накладную:\n{str(e)}")
 
     def export_invoice_pdf(self):
-        """Экспорт выбранной накладной в PDF"""
+        """Экспорт выбранной накладной в PDF (сохранение по указанному пути)"""
         try:
             selection = self.invoices_tree.selection()
             if not selection:
@@ -4055,107 +4102,26 @@ class ModernStartWindow:
             messagebox.showerror("Ошибка", f"Не удалось создать PDF:\n{str(e)}")
 
     def _export_invoice_pdf(self, invoice, items):
-        """Создать PDF файл накладной"""
+        """Создать PDF файл накладной, спросив у пользователя путь сохранения"""
         try:
-            from reportlab.lib.pagesizes import A4
-            from reportlab.pdfgen import canvas
-            from reportlab.lib.units import mm
-            from reportlab.lib.colors import black, Color
-
+            from modules.invoice_pdf import generate_invoice_pdf, default_invoice_filename
             from tkinter import filedialog
-
-            default_filename = f"накладная_{invoice['invoice_number']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
 
             filename = filedialog.asksaveasfilename(
                 title="Сохранить накладную как PDF",
                 initialdir=".",
-                initialfile=default_filename,
+                initialfile=default_invoice_filename(invoice),
                 defaultextension=".pdf",
                 filetypes=[("PDF файлы", "*.pdf"), ("Все файлы", "*.*")]
             )
             if not filename:
                 return
 
-            c = canvas.Canvas(filename, pagesize=A4)
-            width, height = A4
-
-            op_labels = {'write_off': 'СПИСАНИЕ', 'transfer': 'ПЕРЕМЕЩЕНИЕ', 'receipt': 'ПРИХОД'}
-            op_label = op_labels.get(invoice['operation_type'], invoice['operation_type'].upper())
-
-            # Заголовок
-            c.setFont("Helvetica-Bold", 16)
-            c.drawString(30 * mm, height - 25 * mm, f"ТРЕБОВАНИЕ-НАКЛАДНАЯ №{invoice['invoice_number']}")
-
-            c.setFont("Helvetica-Bold", 14)
-            c.drawString(30 * mm, height - 35 * mm, f"Тип операции: {op_label}")
-
-            # Линия
-            c.line(30 * mm, height - 40 * mm, 180 * mm, height - 40 * mm)
-
-            # Информация
-            c.setFont("Helvetica", 10)
-            y = height - 48 * mm
-
-            c.drawString(30 * mm, y, f"Откуда: {invoice.get('source_location') or '—'}")
-            c.drawString(120 * mm, y, f"Куда: {invoice.get('destination_location') or '—'}")
-            y -= 6 * mm
-
-            c.drawString(30 * mm, y, f"Дата: {invoice['created_date'][:16] if invoice.get('created_date') else '—'}")
-            c.drawString(120 * mm, y, f"Статус: {'Активна' if invoice['status'] == 'active' else 'Отменена'}")
-
-            if invoice.get('notes'):
-                y -= 6 * mm
-                c.drawString(30 * mm, y, f"Примечание: {invoice['notes']}")
-
-            # Таблица позиций
-            y -= 10 * mm
-            c.setFont("Helvetica-Bold", 9)
-            c.drawString(10 * mm, y, "№")
-            c.drawString(30 * mm, y, "Код")
-            c.drawString(80 * mm, y, "Наименование")
-            c.drawString(155 * mm, y, "Кол-во, кг")
-
-            c.line(10 * mm, y - 1 * mm, 190 * mm, y - 1 * mm)
-            y -= 6 * mm
-
-            c.setFont("Helvetica", 9)
-            total_qty = 0
-            for i, item in enumerate(items, 1):
-                if y < 30 * mm:
-                    c.showPage()
-                    y = height - 30 * mm
-                    c.setFont("Helvetica", 9)
-
-                c.drawString(12 * mm, y, str(i))
-                c.drawString(30 * mm, y, item['component_code'])
-                name = item['component_name']
-                if len(name) > 30:
-                    name = name[:27] + "..."
-                c.drawString(80 * mm, y, name)
-                qty = float(item['quantity'])
-                c.drawRightString(185 * mm, y, f"{qty:.1f}")
-                total_qty += qty
-                y -= 5 * mm
-
-            # Итоговая строка
-            c.line(10 * mm, y - 1 * mm, 190 * mm, y - 1 * mm)
-            y -= 6 * mm
-            c.setFont("Helvetica-Bold", 10)
-            c.drawString(80 * mm, y, f"ИТОГО: {len(items)} позиций")
-            c.drawRightString(185 * mm, y, f"{total_qty:.1f} кг")
-
-            # Подписи
-            y -= 20 * mm
-            c.setFont("Helvetica", 10)
-            c.drawString(30 * mm, y, "Отпустил: _________________")
-            c.drawString(120 * mm, y, "Получил: _________________")
-            y -= 6 * mm
-            c.drawString(30 * mm, y, f"Дата: {datetime.now().strftime('%d.%m.%Y')}")
-
-            c.save()
-
-            messagebox.showinfo("Успех", f"PDF сохранён:\n{filename}")
-            self.logger.info(f"PDF накладной создан: {filename}")
+            if generate_invoice_pdf(invoice, items, filename):
+                messagebox.showinfo("Успех", f"PDF сохранён:\n{filename}")
+                self.logger.info(f"PDF накладной создан: {filename}")
+            else:
+                messagebox.showerror("Ошибка", "Не удалось создать PDF накладной")
 
         except Exception as e:
             self.logger.error(f"Ошибка создания PDF накладной: {e}")
@@ -4190,79 +4156,17 @@ class ModernStartWindow:
             import tempfile
             import subprocess
             import os
+            from modules.invoice_pdf import generate_invoice_pdf
 
-            # Сохраняем во временный PDF и открываем
             with tempfile.NamedTemporaryFile(
                 suffix='.pdf', prefix=f'invoice_{invoice["invoice_number"]}_',
                 delete=False
             ) as tmp:
                 tmp_path = tmp.name
 
-            # Создаём PDF во временный файл
-            from reportlab.lib.pagesizes import A4
-            from reportlab.pdfgen import canvas
-            from reportlab.lib.units import mm
-
-            c = canvas.Canvas(tmp_path, pagesize=A4)
-            width, height = A4
-
-            op_labels = {'write_off': 'СПИСАНИЕ', 'transfer': 'ПЕРЕМЕЩЕНИЕ', 'receipt': 'ПРИХОД'}
-            op_label = op_labels.get(invoice['operation_type'], invoice['operation_type'].upper())
-
-            c.setFont("Helvetica-Bold", 16)
-            c.drawString(30 * mm, height - 25 * mm, f"ТРЕБОВАНИЕ-НАКЛАДНАЯ №{invoice['invoice_number']}")
-            c.setFont("Helvetica-Bold", 14)
-            c.drawString(30 * mm, height - 35 * mm, f"Тип операции: {op_label}")
-            c.line(30 * mm, height - 40 * mm, 180 * mm, height - 40 * mm)
-
-            c.setFont("Helvetica", 10)
-            y = height - 48 * mm
-            c.drawString(30 * mm, y, f"Откуда: {invoice.get('source_location') or '—'}")
-            c.drawString(120 * mm, y, f"Куда: {invoice.get('destination_location') or '—'}")
-            y -= 6 * mm
-            c.drawString(30 * mm, y, f"Дата: {invoice['created_date'][:16] if invoice.get('created_date') else '—'}")
-
-            y -= 10 * mm
-            c.setFont("Helvetica-Bold", 9)
-            c.drawString(10 * mm, y, "№")
-            c.drawString(30 * mm, y, "Код")
-            c.drawString(80 * mm, y, "Наименование")
-            c.drawString(155 * mm, y, "Кол-во, кг")
-            c.line(10 * mm, y - 1 * mm, 190 * mm, y - 1 * mm)
-            y -= 6 * mm
-
-            c.setFont("Helvetica", 9)
-            total_qty = 0
-            for i, item in enumerate(items, 1):
-                if y < 30 * mm:
-                    c.showPage()
-                    y = height - 30 * mm
-                    c.setFont("Helvetica", 9)
-                c.drawString(12 * mm, y, str(i))
-                c.drawString(30 * mm, y, item['component_code'])
-                name = item['component_name']
-                if len(name) > 30:
-                    name = name[:27] + "..."
-                c.drawString(80 * mm, y, name)
-                qty = float(item['quantity'])
-                c.drawRightString(185 * mm, y, f"{qty:.1f}")
-                total_qty += qty
-                y -= 5 * mm
-
-            c.line(10 * mm, y - 1 * mm, 190 * mm, y - 1 * mm)
-            y -= 6 * mm
-            c.setFont("Helvetica-Bold", 10)
-            c.drawString(80 * mm, y, f"ИТОГО: {len(items)} позиций")
-            c.drawRightString(185 * mm, y, f"{total_qty:.1f} кг")
-
-            y -= 20 * mm
-            c.setFont("Helvetica", 10)
-            c.drawString(30 * mm, y, "Отпустил: _________________")
-            c.drawString(120 * mm, y, "Получил: _________________")
-            y -= 6 * mm
-            c.drawString(30 * mm, y, f"Дата: {datetime.now().strftime('%d.%m.%Y')}")
-
-            c.save()
+            if not generate_invoice_pdf(invoice, items, tmp_path):
+                messagebox.showerror("Ошибка", "Не удалось создать PDF накладной")
+                return
 
             # Открываем PDF в системном просмотрщике
             if os.name == 'nt':  # Windows

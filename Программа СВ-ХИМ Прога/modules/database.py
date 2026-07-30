@@ -1103,15 +1103,53 @@ class DatabaseManager:
     @log_operation("Создание требования-накладной", LogLevel.INFO)
     def create_invoice(self, invoice_number: str, operation_type: str,
                        source_location: str = "", destination_location: str = "",
-                       notes: str = "", items: list = None) -> int:
+                       notes: str = "", items: list = None,
+                       allow_negative_stock: bool = False) -> int:
         """Создать новый документ требования-накладной.
-        
+
         operation_type: 'write_off' (списание), 'transfer' (перемещение), 'receipt' (приход)
         items: список словарей [{'component_code': ..., 'component_name': ..., 'quantity': ...}]
-        
+        allow_negative_stock: если False (по умолчанию), при списании/перемещении
+            запрещается уводить остаток компонента в минус — будет выброшено
+            исключение ValueError с описанием, каких компонентов не хватает.
+
         Возвращает ID созданной накладной.
         """
         try:
+            items = items or []
+
+            # ---- Предварительная проверка остатков (до записи в БД) ----
+            # Для списания и перемещения товар должен реально быть на складе
+            # в достаточном количестве, иначе получаем "виртуальный" отрицательный
+            # остаток, который не соответствует действительности.
+            if operation_type in ('write_off', 'transfer') and not allow_negative_stock:
+                warehouse_stock = {
+                    w['component_code']: float(w['current_stock'] or 0.0)
+                    for w in self.get_warehouse_items()
+                }
+                shortages = []
+                # Суммируем количество по каждому компоненту на случай,
+                # если один и тот же код указан в накладной несколько раз
+                requested = {}
+                for item in items:
+                    code = item['component_code']
+                    requested[code] = requested.get(code, 0.0) + float(item['quantity'])
+
+                for code, qty in requested.items():
+                    available = warehouse_stock.get(code)
+                    if available is None:
+                        shortages.append(f"{code} — отсутствует на складе")
+                    elif available < qty:
+                        shortages.append(
+                            f"{code} — на складе {available:.3f}, требуется {qty:.3f}"
+                        )
+
+                if shortages:
+                    raise ValueError(
+                        "Недостаточно остатков для проведения накладной:\n" +
+                        "\n".join(shortages)
+                    )
+
             self.cursor.execute('''
                 INSERT INTO requirement_invoices 
                 (invoice_number, operation_type, source_location, destination_location, notes)
@@ -1131,21 +1169,24 @@ class DatabaseManager:
                 # Обновляем склад в зависимости от типа операции
                 for item in items:
                     component_code = item['component_code']
+                    component_name = item.get('component_name', component_code)
+                    unit = item.get('unit', 'кг')
                     quantity = float(item['quantity'])
 
                     if operation_type == 'write_off':
                         # Списание: уменьшаем остаток
-                        self.update_warehouse_stock(component_code, -quantity)
+                        self._apply_stock_change(component_code, component_name, unit, -quantity)
                         self.logger.info(f"Списание со склада: {component_code} - {quantity} кг")
 
                     elif operation_type == 'receipt':
-                        # Приход: увеличиваем остаток
-                        self.update_warehouse_stock(component_code, quantity)
+                        # Приход: увеличиваем остаток. Если позиции ещё нет на
+                        # складе — создаём её автоматически, иначе приход "терялся".
+                        self._apply_stock_change(component_code, component_name, unit, quantity)
                         self.logger.info(f"Приход на склад: {component_code} + {quantity} кг")
 
                     elif operation_type == 'transfer':
                         # Перемещение: уменьшаем с источника
-                        self.update_warehouse_stock(component_code, -quantity)
+                        self._apply_stock_change(component_code, component_name, unit, -quantity)
                         self.logger.info(f"Перемещение со склада: {component_code} - {quantity} кг")
 
             self.conn.commit()
@@ -1156,6 +1197,34 @@ class DatabaseManager:
             self.conn.rollback()
             self.logger.error(f"Ошибка создания требования-накладной: {e}")
             raise
+
+    def _apply_stock_change(self, component_code: str, component_name: str,
+                             unit: str, quantity_change: float):
+        """Изменить остаток компонента на складе.
+
+        Если позиции с таким кодом ещё нет на складе (актуально для прихода
+        новых материалов), создаёт её автоматически вместо того, чтобы
+        молча потерять изменение (старое поведение update_warehouse_stock
+        с UPDATE...WHERE ничего не делало для несуществующих кодов).
+        """
+        self.cursor.execute(
+            'SELECT id FROM warehouse WHERE component_code = ?', (component_code,)
+        )
+        exists = self.cursor.fetchone()
+
+        if exists:
+            self.cursor.execute('''
+                UPDATE warehouse
+                SET current_stock = current_stock + ?, last_updated = CURRENT_TIMESTAMP
+                WHERE component_code = ?
+            ''', (quantity_change, component_code))
+        else:
+            # Новая позиция — остаток не может быть отрицательным
+            initial_stock = max(quantity_change, 0.0)
+            self.cursor.execute('''
+                INSERT INTO warehouse (component_code, component_name, current_stock, unit)
+                VALUES (?, ?, ?, ?)
+            ''', (component_code, component_name, initial_stock, unit))
 
     def get_invoices(self, limit: int = 100) -> List[Dict[str, Any]]:
         """Получение списка всех требований-накладных"""
@@ -1198,13 +1267,25 @@ class DatabaseManager:
             return []
 
     def delete_invoice(self, invoice_id: int) -> bool:
-        """Удалить требование-накладную и её позиции"""
+        """Удалить требование-накладную и её позиции.
+
+        Если накладная ещё активна (её проводка не была отменена ранее),
+        перед удалением возвращает остатки на склад, как они были до
+        проведения документа — иначе списанный/перемещённый товар
+        "пропадал" бы навсегда, даже после удаления накладной.
+        """
         try:
-            self.execute_query('DELETE FROM invoice_items WHERE invoice_id = ?', (invoice_id,))
-            self.execute_query('DELETE FROM requirement_invoices WHERE id = ?', (invoice_id,))
-            self.logger.info(f"Удалена накладная ID={invoice_id}")
+            invoice = self.get_invoice_details(invoice_id)
+            if invoice and invoice.get('status') == 'active':
+                self._revert_invoice_stock_internal(invoice, self.get_invoice_items(invoice_id))
+
+            self.cursor.execute('DELETE FROM invoice_items WHERE invoice_id = ?', (invoice_id,))
+            self.cursor.execute('DELETE FROM requirement_invoices WHERE id = ?', (invoice_id,))
+            self.conn.commit()
+            self.logger.info(f"Удалена накладная ID={invoice_id} (остатки возвращены)")
             return True
         except Exception as e:
+            self.conn.rollback()
             self.logger.error(f"Ошибка удаления накладной ID={invoice_id}: {e}")
             return False
 
@@ -1224,6 +1305,27 @@ class DatabaseManager:
             from datetime import datetime
             return f'ТН-{datetime.now().strftime("%Y%m%d%H%M%S")}'
 
+    def _revert_invoice_stock_internal(self, invoice: dict, items: list):
+        """Вернуть остатки склада к состоянию до проведения накладной.
+
+        Общая логика для revert_invoice_stock() и delete_invoice().
+        Не коммитит транзакцию — это должен делать вызывающий код.
+        """
+        op_type = invoice['operation_type']
+
+        for item in items:
+            qty = float(item['quantity'])
+            component_code = item['component_code']
+            component_name = item.get('component_name', component_code)
+            unit = item.get('unit', 'кг')
+
+            if op_type == 'write_off':
+                self._apply_stock_change(component_code, component_name, unit, qty)
+            elif op_type == 'receipt':
+                self._apply_stock_change(component_code, component_name, unit, -qty)
+            elif op_type == 'transfer':
+                self._apply_stock_change(component_code, component_name, unit, qty)
+
     def revert_invoice_stock(self, invoice_id: int) -> bool:
         """Отменить проводку накладной (вернуть остатки как было)"""
         try:
@@ -1231,25 +1333,22 @@ class DatabaseManager:
             if not invoice:
                 return False
 
+            if invoice.get('status') != 'active':
+                self.logger.warning(f"Накладная ID={invoice_id} уже не активна, повторная отмена пропущена")
+                return False
+
             items = self.get_invoice_items(invoice_id)
-            op_type = invoice['operation_type']
+            self._revert_invoice_stock_internal(invoice, items)
 
-            for item in items:
-                qty = float(item['quantity'])
-                if op_type == 'write_off':
-                    self.update_warehouse_stock(item['component_code'], qty)
-                elif op_type == 'receipt':
-                    self.update_warehouse_stock(item['component_code'], -qty)
-                elif op_type == 'transfer':
-                    self.update_warehouse_stock(item['component_code'], qty)
-
-            self.execute_query(
+            self.cursor.execute(
                 "UPDATE requirement_invoices SET status = 'reverted' WHERE id = ?",
                 (invoice_id,)
             )
+            self.conn.commit()
             self.logger.info(f"Отменена проводка накладной ID={invoice_id}")
             return True
         except Exception as e:
+            self.conn.rollback()
             self.logger.error(f"Ошибка отмены проводки накладной ID={invoice_id}: {e}")
             return False
 
