@@ -3589,13 +3589,50 @@ class ModernStartWindow:
     def _add_invoice_item_row(self, tree, warehouse_map):
         """Добавить строку в таблицу позиций накладной"""
         try:
-            # Создаём обычный Toplevel (без grab_set — избегаем вложенного grab)
-            dialog = tk.Toplevel(self.root)
+            # ---- Освобождаем grab родительского диалога, если он есть ----
+            # Родительский диалог (create_invoice_dialog) уже держит grab_set().
+            # Tcl/Tk не поддерживает вложенные grab — вторая попытка grab_set()
+            # тихо провалится, и события мыши будут уходить родителю.
+            parent_dialog = None
+            for w in self.root.winfo_children():
+                if isinstance(w, tk.Toplevel) and w.winfo_exists():
+                    try:
+                        if w.grab_current():
+                            parent_dialog = w
+                            break
+                    except Exception:
+                        continue
+
+            # Создаём пикер как дочернее окно родительского диалога (или root)
+            dialog = tk.Toplevel(parent_dialog or self.root)
             dialog.title("Добавить позицию")
             dialog.geometry("700x500")
             dialog.configure(bg=self.colors['background'])
             dialog.resizable(False, False)
-            dialog.transient(self.root)  # только поверх родителя, без grab
+            dialog.transient(parent_dialog or self.root)
+
+            # Освобождаем grab родителя ПЕРЕД установкой собственного grab
+            parent_grab_released = False
+            if parent_dialog:
+                try:
+                    parent_dialog.grab_release()
+                    parent_grab_released = True
+                except Exception:
+                    pass
+
+            # Теперь устанавливаем grab на пикере — это сработает,
+            # т.к. родительский grab уже отпущен
+            try:
+                dialog.grab_set()
+            except Exception:
+                pass
+
+            # Обработчик закрытия окна (X) — восстанавливаем grab родителя
+            def on_picker_close():
+                _closing[0] = True
+                self.safe_destroy_dialog(dialog)
+
+            dialog.protocol('WM_DELETE_WINDOW', on_picker_close)
 
             dialog.update_idletasks()
             try:
@@ -3737,11 +3774,11 @@ class ModernStartWindow:
 
                     tree.insert('', 'end', values=(code, name, f"{qty:.1f}", 'кг'))
                     _closing[0] = True
-                    dialog.destroy()
+                    self.safe_destroy_dialog(dialog)
                 except Exception as e:
                     self.logger.error(f"Ошибка в confirm_selection: {e}")
                     _closing[0] = True
-                    dialog.destroy()
+                    self.safe_destroy_dialog(dialog)
 
             def safe_add_call(event):
                 try:
@@ -3757,12 +3794,27 @@ class ModernStartWindow:
 
             self.create_modern_button(btn_frame, "✅ Добавить",
                                       confirm_selection, 'success').pack(side='left', padx=10)
+
             def cancel_picker():
                 _closing[0] = True
-                dialog.destroy()
+                self.safe_destroy_dialog(dialog)
 
             self.create_modern_button(btn_frame, "Отмена",
                                       cancel_picker, 'secondary').pack(side='right', padx=10)
+
+            # ===== КЛЮЧЕВОЙ МОМЕНТ: ждём закрытия пикера =====
+            # wait_window() создаёт вложенный цикл событий, который
+            # блокирует выполнение до уничтожения dialog.
+            # Всё это время grab_set() на пикере активен и работает,
+            # потому что родительский grab был отпущен выше.
+            dialog.wait_window()
+
+            # После закрытия пикера — восстанавливаем grab родителя
+            if parent_dialog and parent_grab_released:
+                try:
+                    parent_dialog.grab_set()
+                except Exception:
+                    pass
 
         except Exception as e:
             self.logger.error(f"Ошибка добавления позиции: {e}")
