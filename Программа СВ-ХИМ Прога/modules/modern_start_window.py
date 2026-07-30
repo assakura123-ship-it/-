@@ -100,6 +100,19 @@ class ModernStartWindow:
         self.logger = system_logger.get_logger('ModernStartWindow')
         self.logger.info("Инициализация современного интерфейса")
 
+        # Глобальный перехватчик исключений Tkinter — предотвращает закрытие всех окон
+        original_rep = self.root.report_callback_exception
+        def safe_report(exc, val, tb):
+            try:
+                self.logger.error(f"Tkinter callback error: {exc.__name__}: {val}")
+            except Exception:
+                pass
+            try:
+                original_rep(exc, val, tb)
+            except Exception:
+                pass
+        self.root.report_callback_exception = safe_report
+
         self.open_editors = {}
 
         # Переменные для импорт/экспорт и логов
@@ -395,6 +408,18 @@ class ModernStartWindow:
         y = (self.root.winfo_screenheight() // 2) - (height // 2)
         self.root.geometry(f'{width}x{height}+{x}+{y}')
 
+    def safe_destroy_dialog(self, dialog):
+        """Безопасное закрытие диалога — grab_release перед destroy"""
+        try:
+            if dialog and dialog.winfo_exists():
+                try:
+                    dialog.grab_release()
+                except Exception:
+                    pass
+                dialog.destroy()
+        except Exception:
+            pass
+
     def create_dialog(self, title: str, width: int, height: int, header_color=None):
         """Создание типового диалога с центрированием и опциональной цветной шапкой"""
         dialog = tk.Toplevel(self.root)
@@ -402,12 +427,14 @@ class ModernStartWindow:
         dialog.geometry(f"{width}x{height}")
         dialog.configure(bg=self.colors['background'])
         dialog.resizable(False, False)
-        dialog.grab_set()
 
         dialog.update_idletasks()
-        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
-        y = (dialog.winfo_screenheight() // 2) - (height // 2)
-        dialog.geometry(f"{width}x{height}+{x}+{y}")
+        try:
+            x = (dialog.winfo_screenwidth() // 2) - (width // 2)
+            y = (dialog.winfo_screenheight() // 2) - (height // 2)
+            dialog.geometry(f"{width}x{height}+{x}+{y}")
+        except Exception:
+            pass
 
         if header_color:
             header_frame = Frame(dialog, bg=header_color, height=52)
@@ -420,6 +447,12 @@ class ModernStartWindow:
 
         main_frame = Frame(dialog, bg=self.colors['background'], padx=20, pady=20)
         main_frame.pack(fill='both', expand=True)
+
+        # Модальность через grab_set — требует grab_release() перед destroy
+        try:
+            dialog.grab_set()
+        except Exception:
+            pass
 
         return dialog, main_frame
 
@@ -3525,7 +3558,7 @@ class ModernStartWindow:
                         notes=notes,
                         items=items_data
                     )
-                    dialog.destroy()
+                    self.safe_destroy_dialog(dialog)
                     self.load_invoices_list()
                     self.load_warehouse_data()
 
@@ -3544,7 +3577,7 @@ class ModernStartWindow:
             save_btn = self.create_modern_button(button_frame, "💾 Сохранить", save_invoice, 'success')
             save_btn.pack(side='left', padx=10)
 
-            cancel_btn = self.create_modern_button(button_frame, "Отмена", dialog.destroy, 'secondary')
+            cancel_btn = self.create_modern_button(button_frame, "Отмена", lambda: self.safe_destroy_dialog(dialog), 'secondary')
             cancel_btn.pack(side='right', padx=10)
 
             self.logger.info("Открыт диалог создания накладной")
@@ -3556,11 +3589,33 @@ class ModernStartWindow:
     def _add_invoice_item_row(self, tree, warehouse_map):
         """Добавить строку в таблицу позиций накладной"""
         try:
-            # Создаём временное диалоговое окно выбора компонента
-            dialog, main = self.create_dialog(
-                "Добавить позицию", 700, 500,
-                header_color=self.colors['primary']
-            )
+            # Создаём обычный Toplevel (без grab_set — избегаем вложенного grab)
+            dialog = tk.Toplevel(self.root)
+            dialog.title("Добавить позицию")
+            dialog.geometry("700x500")
+            dialog.configure(bg=self.colors['background'])
+            dialog.resizable(False, False)
+            dialog.transient(self.root)  # только поверх родителя, без grab
+
+            dialog.update_idletasks()
+            try:
+                x = (dialog.winfo_screenwidth() // 2) - 350
+                y = (dialog.winfo_screenheight() // 2) - 250
+                dialog.geometry(f"+{x}+{y}")
+            except Exception:
+                pass
+
+            # Шапка
+            header_frame = Frame(dialog, bg=self.colors['primary'], height=52)
+            header_frame.pack(fill='x')
+            header_frame.pack_propagate(False)
+            Label(header_frame, text="Добавить позицию",
+                  font=self.fonts['h3'],
+                  bg=self.colors['primary'],
+                  fg=self.colors['text_on_accent']).pack(pady=10)
+
+            main = Frame(dialog, bg=self.colors['background'], padx=20, pady=20)
+            main.pack(fill='both', expand=True)
 
             Label(main, text="Выберите компонент со склада или введите вручную:",
                   font=self.fonts['body'],
@@ -3609,21 +3664,40 @@ class ModernStartWindow:
 
             # Фильтрация
             def filter_items(*args):
-                text = search_var.get().lower().strip()
-                for item in pick_tree.get_children():
-                    pick_tree.delete(item)
-                for w_item in all_items:
-                    if (not text or
-                            text in w_item['component_code'].lower() or
-                            text in w_item['component_name'].lower()):
-                        pick_tree.insert('', 'end', values=(
-                            w_item['component_code'],
-                            w_item['component_name'],
-                            f"{w_item['current_stock']:.1f}",
-                            w_item.get('unit', 'кг')
-                        ))
+                try:
+                    if not pick_tree.winfo_exists():
+                        return
+                    text = search_var.get().lower().strip()
+                    try:
+                        children = pick_tree.get_children()
+                    except Exception:
+                        return
+                    for item in children:
+                        try:
+                            pick_tree.delete(item)
+                        except Exception:
+                            pass
+                    for w_item in all_items:
+                        if (not text or
+                                text in w_item['component_code'].lower() or
+                                text in w_item['component_name'].lower()):
+                            try:
+                                pick_tree.insert('', 'end', values=(
+                                    w_item['component_code'],
+                                    w_item['component_name'],
+                                    f"{w_item['current_stock']:.1f}",
+                                    w_item.get('unit', 'кг')
+                                ))
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
 
-            search_var.trace('w', filter_items)
+            # Флаг защиты — при закрытии диалога trace не должен трогать виджеты
+            _closing = [False]
+
+            # Сохраняем trace_id для возможности отключения
+            _trace_id = search_var.trace('w', lambda *a: filter_items(*a) if not _closing[0] else None)
 
             # Поле для ручного ввода количества
             qty_frame = Frame(main, bg=self.colors['background'])
@@ -3638,37 +3712,40 @@ class ModernStartWindow:
             qty_entry.pack(side='left', padx=(10, 0))
 
             def confirm_selection():
-                selection = pick_tree.selection()
-                if selection:
-                    values = pick_tree.item(selection[0], 'values')
-                    code = values[0]
-                    name = values[1]
-                else:
-                    code = search_var.get().strip()
-                    name = code
-                    if not code:
-                        messagebox.showwarning("Внимание",
-                                               "Выберите компонент из списка или введите код в поиске")
+                try:
+                    selection = pick_tree.selection()
+                    if selection:
+                        values = pick_tree.item(selection[0], 'values')
+                        code = values[0]
+                        name = values[1]
+                    else:
+                        code = search_var.get().strip()
+                        name = code
+                        if not code:
+                            messagebox.showwarning("Внимание",
+                                                   "Выберите компонент из списка или введите код в поиске")
+                            return
+
+                    try:
+                        qty = float(qty_var.get().replace(',', '.'))
+                    except ValueError:
+                        qty = 0
+
+                    if qty <= 0:
+                        messagebox.showwarning("Внимание", "Введите количество больше 0")
                         return
 
-                try:
-                    qty = float(qty_var.get().replace(',', '.'))
-                except ValueError:
-                    qty = 0
-
-                if qty <= 0:
-                    messagebox.showwarning("Внимание", "Введите количество больше 0")
-                    return
-
-                tree.insert('', 'end', values=(code, name, f"{qty:.1f}", 'кг'))
-                dialog.destroy()
-
-            def quick_add_and_close():
-                confirm_selection()
+                    tree.insert('', 'end', values=(code, name, f"{qty:.1f}", 'кг'))
+                    _closing[0] = True
+                    dialog.destroy()
+                except Exception as e:
+                    self.logger.error(f"Ошибка в confirm_selection: {e}")
+                    _closing[0] = True
+                    dialog.destroy()
 
             def safe_add_call(event):
                 try:
-                    quick_add_and_close()
+                    confirm_selection()
                 except Exception as ex:
                     self.logger.error(f"Ошибка при быстром добавлении: {ex}")
 
@@ -3680,8 +3757,12 @@ class ModernStartWindow:
 
             self.create_modern_button(btn_frame, "✅ Добавить",
                                       confirm_selection, 'success').pack(side='left', padx=10)
+            def cancel_picker():
+                _closing[0] = True
+                dialog.destroy()
+
             self.create_modern_button(btn_frame, "Отмена",
-                                      dialog.destroy, 'secondary').pack(side='right', padx=10)
+                                      cancel_picker, 'secondary').pack(side='right', padx=10)
 
         except Exception as e:
             self.logger.error(f"Ошибка добавления позиции: {e}")
@@ -3851,18 +3932,18 @@ class ModernStartWindow:
                     self._export_invoice_pdf(invoice, items)
                 except Exception as ex:
                     self.logger.error(f"Ошибка PDF из деталей: {ex}")
-                dialog.destroy()
+                self.safe_destroy_dialog(dialog)
 
             def print_inv():
                 try:
                     self._print_invoice_direct(invoice, items)
                 except Exception as ex:
                     self.logger.error(f"Ошибка печати из деталей: {ex}")
-                dialog.destroy()
+                self.safe_destroy_dialog(dialog)
 
             self.create_modern_button(btn_frame, "📄 PDF", export_pdf, 'primary').pack(side='left', padx=10)
             self.create_modern_button(btn_frame, "🖨️ Печать", print_inv, 'secondary').pack(side='left', padx=10)
-            self.create_modern_button(btn_frame, "Закрыть", dialog.destroy, 'secondary').pack(side='right', padx=10)
+            self.create_modern_button(btn_frame, "Закрыть", lambda: self.safe_destroy_dialog(dialog), 'secondary').pack(side='right', padx=10)
 
         except Exception as e:
             self.logger.error(f"Ошибка просмотра накладной: {e}")
