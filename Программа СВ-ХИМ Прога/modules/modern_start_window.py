@@ -4687,10 +4687,10 @@ class ModernStartWindow:
             for item in self._rmr_comp_tree.get_children():
                 self._rmr_comp_tree.delete(item)
             for comp_code, share in rec['components'].items():
-                comp_name = ''
+                comp_name = rec.get('component_names', {}).get(comp_code, '')
                 for det in self._rmr_inventory_details:
                     if det['code'] == comp_code:
-                        comp_name = det['name']
+                        comp_name = det['name'] or comp_name
                         break
                 self._rmr_comp_tree.insert('', 'end',
                     values=(comp_code, comp_name, f"{share * 100:.1f}"))
