@@ -3495,6 +3495,37 @@ class ModernStartWindow:
             )
             clear_items_btn.pack(side='left', padx=3)
 
+            # Разделитель
+            separator = Frame(btn_row, bg=self.colors['background'], width=20)
+            separator.pack(side='left', padx=5)
+
+            # Кнопки сохранения / проведения / экспорта в верхнем ряду
+            draft_btn = self.create_modern_button(
+                btn_row, "💾 Сохранить черновик",
+                lambda: save_invoice(post=False), 'secondary'
+            )
+            draft_btn.pack(side='left', padx=3)
+            ToolTip(draft_btn, "Сохранить документ как черновик без изменения остатков")
+
+            post_btn = self.create_modern_button(
+                btn_row, "✅ Провести накладную",
+                lambda: save_invoice(post=True), 'success'
+            )
+            post_btn.pack(side='left', padx=3)
+            ToolTip(post_btn, "Сохранить документ и сразу провести его по складу")
+
+            pdf_btn = self.create_modern_button(
+                btn_row, "📄 PDF", export_invoice_pdf, 'primary'
+            )
+            pdf_btn.pack(side='left', padx=3)
+            ToolTip(pdf_btn, "Экспортировать текущий документ в PDF без сохранения в базу")
+
+            excel_btn = self.create_modern_button(
+                btn_row, "📊 Excel", export_invoice_excel, 'primary'
+            )
+            excel_btn.pack(side='left', padx=3)
+            ToolTip(excel_btn, "Экспортировать текущий документ в Excel без сохранения в базу")
+
             # Таблица позиций
             table_container = Frame(items_frame, bg=self.colors['surface'],
                                     highlightbackground=self.colors['border'],
@@ -3764,22 +3795,6 @@ class ModernStartWindow:
                 except Exception as e:
                     messagebox.showerror("Ошибка", f"Не удалось экспортировать Excel:\n{str(e)}")
                     self.logger.error(f"Ошибка экспорта Excel из диалога создания: {e}")
-
-            post_btn = self.create_modern_button(action_frame, "Провести накладную", lambda: save_invoice(post=True), 'success')
-            post_btn.pack(side='left', padx=(0, 8))
-            ToolTip(post_btn, "Сохранить документ и сразу провести его по складу: обновятся остатки (списание/приход/перемещение)")
-
-            draft_btn = self.create_modern_button(action_frame, "Сохранить черновик", lambda: save_invoice(post=False), 'secondary')
-            draft_btn.pack(side='left', padx=8)
-            ToolTip(draft_btn, "Сохранить документ как черновик без изменения остатков; провести позже кнопкой «Провести» в списке")
-
-            pdf_btn = self.create_modern_button(action_frame, "📄 PDF", export_invoice_pdf, 'primary')
-            pdf_btn.pack(side='left', padx=8)
-            ToolTip(pdf_btn, "Экспортировать текущий документ в PDF без сохранения в базу")
-
-            excel_btn = self.create_modern_button(action_frame, "📊 Excel", export_invoice_excel, 'primary')
-            excel_btn.pack(side='left', padx=8)
-            ToolTip(excel_btn, "Экспортировать текущий документ в Excel без сохранения в базу")
 
             cancel_btn = self.create_modern_button(action_frame, "Отмена", lambda: self.safe_destroy_dialog(dialog), 'secondary')
             cancel_btn.pack(side='right', padx=(8, 0))
