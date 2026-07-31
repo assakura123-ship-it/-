@@ -81,7 +81,7 @@ class ToolTip:
 
 
 class TabButton:
-    """Кнопка одной вкладки в кастомном таб-баре."""
+    """Кнопка одной вкладки в кастомном таб-баре — мягкая, пилюлевидная."""
 
     def __init__(self, parent, text, tab_id, tab_manager, closable=True):
         self.tab_id = tab_id
@@ -89,60 +89,112 @@ class TabButton:
         self.colors = tab_manager.colors
         self.fonts = tab_manager.fonts
         self.closable = closable
+        self.radius = 16          # сильное скругление для мягкости
+        self.height = 32
+        self.padding_x = 14
+        self.close_area = 26
 
-        self.frame = Frame(parent, bg=self.colors['background'], padx=2, pady=2)
+        self.frame = Frame(parent, bg=self.colors['background'])
 
-        self.button = Label(
+        self.canvas = tk.Canvas(
             self.frame,
-            text=text,
-            font=self.fonts['caption'],
+            height=self.height,
             bg=self.colors['background'],
-            fg=self.colors['tab_unselected'],
-            padx=12,
-            pady=6,
+            highlightthickness=0,
             cursor='hand2'
         )
-        self.button.pack(side='left')
+        self.canvas.pack(side='left')
 
-        if closable:
-            self.close_label = Label(
-                self.frame,
-                text='×',
-                font=self.fonts['caption'],
-                bg=self.colors['background'],
-                fg=self.colors['text_muted'],
-                padx=6,
-                pady=6,
-                cursor='hand2'
-            )
-            self.close_label.pack(side='left')
-            self.close_label.bind('<Enter>', self._on_close_enter)
-            self.close_label.bind('<Leave>', self._on_close_leave)
-            self.close_label.bind('<Button-1>', self._on_close_click)
-
-        self.button.bind('<Button-1>', self._on_click)
-        self.button.bind('<Enter>', self._on_enter)
-        self.button.bind('<Leave>', self._on_leave)
+        self.canvas.bind('<Button-1>', self._on_click)
+        self.canvas.bind('<Enter>', self._on_enter)
+        self.canvas.bind('<Leave>', self._on_leave)
 
         self.text = text
+        self.selected = False
+        self.hovered = False
+        self.close_hovered = False
+
+        self._measure_and_draw()
+
+    def _measure_and_draw(self):
+        self.frame.update_idletasks()
+        font = self.fonts['caption']
+        close_width = self.close_area if self.closable else 0
+        # Approximate text width: 7px per char for small font
+        text_width = max(50, len(self.text) * 7 + self.padding_x * 2 + close_width)
+        total_width = text_width + 8
+        self.canvas.config(width=total_width)
+
+        self.canvas.delete('all')
+        self._draw_background(total_width)
+        self.canvas.create_text(
+            total_width / 2 - (close_width / 2) + 3,
+            self.height / 2 + 1,
+            text=self.text,
+            font=font,
+            fill=self.colors['tab_selected'] if self.selected else self.colors['tab_unselected'],
+            anchor='center',
+            tags='text'
+        )
+        if self.closable:
+            self.close_id = self.canvas.create_text(
+                total_width - 14,
+                self.height / 2 + 1,
+                text='×',
+                font=(font[0], font[1] + 2, 'normal'),
+                fill=self.colors['danger'] if self.close_hovered else self.colors['text_muted'],
+                anchor='center',
+                tags='close'
+            )
+            self.canvas.tag_bind('close', '<Enter>', self._on_close_enter)
+            self.canvas.tag_bind('close', '<Leave>', self._on_close_leave)
+            self.canvas.tag_bind('close', '<Button-1>', self._on_close_click)
+
+    def _rounded_capsule(self, x, y, width, height, radius, **kwargs):
+        r = min(radius, height / 2)
+        points = [
+            x + r, y,
+            x + width - r, y,
+            x + width, y + r,
+            x + width, y + height - r,
+            x + width - r, y + height,
+            x + r, y + height,
+            x, y + height - r,
+            x, y + r,
+        ]
+        return self.canvas.create_polygon(points, smooth=True, **kwargs)
+
+    def _draw_background(self, width):
+        if self.selected:
+            bg = self.colors['primary_light']
+            fg = self.colors['primary']
+        else:
+            bg = self.colors['hover'] if self.hovered else self.colors['background']
+            fg = self.colors['tab_unselected']
+        self._rounded_capsule(2, 2, width - 4, self.height - 4, self.radius,
+                              fill=bg, outline=fg, width=1, tags='bg')
+        self.canvas.tag_lower('bg')
 
     def _on_click(self, event=None):
         self.tab_manager.select_tab(self.tab_id)
 
     def _on_enter(self, event=None):
         if self.tab_manager.current_tab != self.tab_id:
-            self.button.config(bg=self.colors['hover'], fg=self.colors['tab_selected'])
-            if self.closable:
-                self.close_label.config(bg=self.colors['hover'])
+            self.hovered = True
+            self._measure_and_draw()
 
     def _on_leave(self, event=None):
-        self._update_style()
+        self.hovered = False
+        self.close_hovered = False
+        self._measure_and_draw()
 
     def _on_close_enter(self, event=None):
-        self.close_label.config(fg=self.colors['danger'])
+        self.close_hovered = True
+        self._measure_and_draw()
 
     def _on_close_leave(self, event=None):
-        self.close_label.config(fg=self.colors['text_muted'])
+        self.close_hovered = False
+        self._measure_and_draw()
 
     def _on_close_click(self, event=None):
         self.tab_manager.close_tab(self.tab_id)
@@ -150,33 +202,15 @@ class TabButton:
 
     def set_text(self, text):
         self.text = text
-        self.button.config(text=text)
+        self._measure_and_draw()
 
     def select(self):
-        self.frame.config(bg=self.colors['surface'])
-        self.button.config(
-            bg=self.colors['surface'],
-            fg=self.colors['tab_selected'],
-            font=(self.fonts['caption'][0], self.fonts['caption'][1], 'bold')
-        )
-        if self.closable:
-            self.close_label.config(bg=self.colors['surface'], fg=self.colors['text_muted'])
+        self.selected = True
+        self._measure_and_draw()
 
     def deselect(self):
-        self.frame.config(bg=self.colors['background'])
-        self.button.config(
-            bg=self.colors['background'],
-            fg=self.colors['tab_unselected'],
-            font=self.fonts['caption']
-        )
-        if self.closable:
-            self.close_label.config(bg=self.colors['background'], fg=self.colors['text_muted'])
-
-    def _update_style(self):
-        if self.tab_manager.current_tab == self.tab_id:
-            self.select()
-        else:
-            self.deselect()
+        self.selected = False
+        self._measure_and_draw()
 
 
 class TabManager:
@@ -194,8 +228,8 @@ class TabManager:
         self.tabs = {}
         self.counter = 0
 
-        # Верхняя панель вкладок
-        self.tab_bar = Frame(parent, bg=colors['background'], height=36)
+        # Верхняя панель вкладок — компактная, без лишних отступов
+        self.tab_bar = Frame(parent, bg=colors['background'], height=42)
         self.tab_bar.pack(fill='x', side='top')
         self.tab_bar.pack_propagate(False)
 
@@ -215,7 +249,7 @@ class TabManager:
             return self.tabs[tab_id]['frame']
 
         tab_button = TabButton(self.tab_bar, text, tab_id, self, closable=closable)
-        tab_button.frame.pack(side='left', padx=(4, 0), pady=(4, 0))
+        tab_button.frame.pack(side='left', padx=(6, 0), pady=(5, 0))
 
         content_frame.pack(in_=self.content_area, fill='both', expand=True)
         content_frame.pack_forget()
@@ -700,49 +734,41 @@ class ModernStartWindow:
         try:
             self.logger.info("Создание виджетов с современным дизайном")
 
-            # Верхняя панель: минималистичный брендинг слева + статус справа
-            header_frame = Frame(self.root,
-                                 bg=self.colors['surface'],
-                                 height=52)
-            header_frame.pack(fill='x', side='top')
-            header_frame.pack_propagate(False)
+            # Единственная верхняя панель: таб-бар + микро-брендинг.
+            # Большой заголовок MOZER убран, чтобы освободить полезное пространство.
+            top_frame = Frame(self.root, bg=self.colors['surface'], height=42)
+            top_frame.pack(fill='x', side='top')
+            top_frame.pack_propagate(False)
 
-            brand_frame = Frame(header_frame, bg=self.colors['surface'])
-            brand_frame.pack(side='left', padx=24)
-
-            # Небольшой акцентный квадрат-логотип + название приложения
-            logo_badge = Frame(brand_frame, bg=self.colors['primary'], width=8, height=24)
-            logo_badge.pack(side='left', pady=14)
-            logo_badge.pack_propagate(False)
+            # Микро-брендинг слева
+            brand_frame = Frame(top_frame, bg=self.colors['surface'])
+            brand_frame.pack(side='left', padx=(14, 8), pady=0)
 
             Label(brand_frame,
-                  text="MOZER",
-                  font=('Segoe UI', 14, 'bold'),
+                  text="MZ",
+                  font=('Segoe UI', 10, 'bold'),
                   bg=self.colors['surface'],
-                  fg=self.colors['on_surface']).pack(side='left', padx=(12, 6))
-
+                  fg=self.colors['primary']).pack(side='left')
             Label(brand_frame,
-                  text="Управление производством",
-                  font=self.fonts['caption'],
+                  text="производство",
+                  font=self.fonts['small'],
                   bg=self.colors['surface'],
-                  fg=self.colors['text_muted']).pack(side='left')
+                  fg=self.colors['text_muted']).pack(side='left', padx=(4, 0))
 
-            # Справа статус
-            status_frame = Frame(header_frame, bg=self.colors['surface'])
-            status_frame.pack(side='right', padx=24)
-
-            self.status_label = Label(status_frame,
+            # Статус справа — мелкий, строгий
+            self.status_label = Label(top_frame,
                                       text="Готов к работе",
-                                      font=self.fonts['caption'],
+                                      font=self.fonts['small'],
                                       bg=self.colors['surface'],
-                                      fg=self.colors['text_muted'])
-            self.status_label.pack(side='right')
+                                      fg=self.colors['text_muted'],
+                                      anchor='e')
+            self.status_label.pack(side='right', padx=(8, 14))
 
             separator = Frame(self.root, height=1, bg=self.colors['border'])
             separator.pack(fill='x', side='top')
 
             main_frame = Frame(self.root, bg=self.colors['background'])
-            main_frame.pack(fill='both', expand=True, padx=24, pady=(16, 20))
+            main_frame.pack(fill='both', expand=True, padx=10, pady=(6, 10))
 
             # Кастомный менеджер вкладок: главная фиксирована, остальные
             # открываются по кнопкам на главной и закрываются как в браузере.
@@ -814,7 +840,7 @@ class ModernStartWindow:
 
             # Верхняя секция: компактная строка с датой/днём недели
             header_frame = Frame(scrollable_frame, bg=self.colors['background'])
-            header_frame.pack(fill='x', padx=20, pady=(20, 10))
+            header_frame.pack(fill='x', padx=20, pady=(16, 8))
 
             now = datetime.now()
             weekday_map = {
@@ -827,47 +853,47 @@ class ModernStartWindow:
                 6: "Воскресенье",
             }
             weekday = weekday_map[now.weekday()]
-            date_str = now.strftime(f"Сегодня {weekday} %d.%m.%Y г. время %H:%M МСК")
+            date_str = now.strftime(f"{weekday}, %d.%m.%Y · %H:%M")
 
             Label(header_frame,
                   text=date_str,
                   font=self.fonts['body'],
                   bg=self.colors['background'],
-                  fg=self.colors['on_background']).pack(anchor='w', pady=(0, 5))
+                  fg=self.colors['text_muted']).pack(anchor='w')
 
-            # Быстрый доступ
+            # Быстрый доступ — строгая, минималистичная сетка
             quick_access_frame = Frame(scrollable_frame, bg=self.colors['background'])
-            quick_access_frame.pack(fill='x', padx=40, pady=40)
+            quick_access_frame.pack(fill='x', padx=28, pady=(20, 24))
 
             Label(quick_access_frame, text="Быстрый доступ",
-                  font=self.fonts['h3'],
+                  font=self.fonts['body_semibold'],
                   bg=self.colors['background'],
-                  fg=self.colors['on_background']).pack(anchor='w', pady=(0, 20))
+                  fg=self.colors['on_background']).pack(anchor='w', pady=(0, 12))
 
             # Кнопки открывают модули в новых закрываемых вкладках.
             # Если вкладка уже открыта — просто переключается на неё.
             quick_buttons = [
-                ("📄 Создать карту", self.open_editor_tab, 'primary'),
-                ("📋 Просмотр карт", self.open_cards_tab, 'secondary'),
-                ("🏭 Управление складом", self.open_warehouse_tab, 'secondary'),
-                ("🧪 Потребность сырья", self.open_raw_material_requirement, 'secondary'),
-                ("🧴 Потребность готовой продукции", self.open_finished_product_requirement, 'secondary'),
-                ("🗂️ Номенклатура", self.open_nomenclature_tab, 'secondary'),
-                ("📄 Требование-накладная", self.open_invoice_tab, 'secondary'),
-                ("📦 Готовая продукция", self.open_finished_products_tab, 'secondary'),
-                ("📤 Импорт/Экспорт", self.open_import_export_tab, 'secondary'),
-                ("📊 Системные логи", self.open_logs_tab, 'secondary')
+                ("Создать карту", self.open_editor_tab, 'primary'),
+                ("Просмотр карт", self.open_cards_tab, 'secondary'),
+                ("Управление складом", self.open_warehouse_tab, 'secondary'),
+                ("Потребность сырья", self.open_raw_material_requirement, 'secondary'),
+                ("Потребность готовой продукции", self.open_finished_product_requirement, 'secondary'),
+                ("Номенклатура", self.open_nomenclature_tab, 'secondary'),
+                ("Требование-накладная", self.open_invoice_tab, 'secondary'),
+                ("Готовая продукция", self.open_finished_products_tab, 'secondary'),
+                ("Импорт/Экспорт", self.open_import_export_tab, 'secondary'),
+                ("Системные логи", self.open_logs_tab, 'secondary')
             ]
 
             grid_frame = Frame(quick_access_frame, bg=self.colors['background'])
             grid_frame.pack(fill='x')
 
             for i, (text, command, color_type) in enumerate(quick_buttons):
-                row = i // 3
-                col = i % 3
+                row = i // 4
+                col = i % 4
 
                 btn_frame = Frame(grid_frame, bg=self.colors['background'])
-                btn_frame.grid(row=row, column=col, sticky='nsew', padx=10, pady=10)
+                btn_frame.grid(row=row, column=col, sticky='nsew', padx=6, pady=6)
 
                 btn = self.create_modern_button(btn_frame, text, command, color_type)
                 btn.pack(fill='x', expand=True)
