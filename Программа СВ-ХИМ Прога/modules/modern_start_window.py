@@ -3206,6 +3206,15 @@ class ModernStartWindow:
             )
             create_btn.pack(side='left', padx=3)
 
+            post_btn = ttk.Button(
+                actions_frame,
+                text="✅ Провести",
+                command=self.post_selected_invoice,
+                style="Modern.TButton",
+                cursor="hand2"
+            )
+            post_btn.pack(side='left', padx=3)
+
             refresh_btn = ttk.Button(
                 actions_frame,
                 text="🔄",
@@ -3215,6 +3224,7 @@ class ModernStartWindow:
             refresh_btn.pack(side='left', padx=3)
 
             ToolTip(create_btn, "Создать новый документ требования-накладной")
+            ToolTip(post_btn, "Провести выбранную накладную: обновить складские остатки согласно документу")
             ToolTip(refresh_btn, "Обновить список накладных")
 
             # ===== КАРТОЧКА С ТАБЛИЦЕЙ АРХИВА =====
@@ -3325,6 +3335,7 @@ class ModernStartWindow:
             }
             status_labels = {
                 'active': 'Активна',
+                'draft': 'Черновик',
                 'reverted': 'Отменена'
             }
 
@@ -3515,44 +3526,63 @@ class ModernStartWindow:
             button_frame = Frame(main_frame, bg=self.colors['background'])
             button_frame.pack(fill='x', pady=(0, 5))
 
-            def save_invoice():
-                """Сохранить накладную"""
+            def collect_invoice_data():
+                """Собрать данные накладной из полей диалога."""
+                op_map = {'Списание': 'write_off', 'Перемещение': 'transfer', 'Приход': 'receipt'}
+                operation_type = op_map.get(op_type_var.get(), 'write_off')
+
+                source = source_var.get().strip()
+                dest = dest_var.get().strip()
+                if '—' in dest:
+                    dest = ''
+
+                items_data = []
+                for item in inv_items_tree.get_children():
+                    values = inv_items_tree.item(item, 'values')
+                    if values and values[0] and values[1]:
+                        try:
+                            qty = float(values[2].replace(',', '.'))
+                            if qty > 0:
+                                items_data.append({
+                                    'component_code': values[0],
+                                    'component_name': values[1],
+                                    'quantity': qty,
+                                    'unit': values[3] if values[3] else 'кг'
+                                })
+                        except (ValueError, IndexError):
+                            continue
+
+                number = inv_number.get().strip()
+                notes = notes_var.get().strip()
+                return {
+                    'number': number,
+                    'operation_type': operation_type,
+                    'source': source,
+                    'destination': dest,
+                    'notes': notes,
+                    'items': items_data,
+                    'op_name': op_type_var.get()
+                }
+
+            def save_invoice(post: bool = True):
+                """Сохранить накладную (с проведением или как черновик)."""
                 try:
-                    # Собираем данные
-                    op_map = {'Списание': 'write_off', 'Перемещение': 'transfer', 'Приход': 'receipt'}
-                    operation_type = op_map.get(op_type_var.get(), 'write_off')
-
-                    source = source_var.get().strip()
-                    dest = dest_var.get().strip()
-                    if '—' in dest:
-                        dest = ''
-
-                    items_data = []
-                    for item in inv_items_tree.get_children():
-                        values = inv_items_tree.item(item, 'values')
-                        if values and values[0] and values[1]:
-                            try:
-                                qty = float(values[2].replace(',', '.'))
-                                if qty > 0:
-                                    items_data.append({
-                                        'component_code': values[0],
-                                        'component_name': values[1],
-                                        'quantity': qty,
-                                        'unit': values[3] if values[3] else 'кг'
-                                    })
-                            except (ValueError, IndexError):
-                                continue
+                    data = collect_invoice_data()
+                    items_data = data['items']
+                    number = data['number']
+                    operation_type = data['operation_type']
+                    source = data['source']
+                    dest = data['destination']
+                    notes = data['notes']
+                    op_name = data['op_name']
 
                     if not items_data:
                         messagebox.showwarning("Внимание", "Добавьте хотя бы одну позицию с количеством > 0")
                         return
 
-                    number = inv_number.get().strip()
                     if not number:
                         messagebox.showwarning("Внимание", "Введите номер накладной")
                         return
-
-                    notes = notes_var.get().strip()
 
                     try:
                         invoice_id = db_manager.create_invoice(
@@ -3561,7 +3591,8 @@ class ModernStartWindow:
                             source_location=source,
                             destination_location=dest,
                             notes=notes,
-                            items=items_data
+                            items=items_data,
+                            post=post
                         )
                     except ValueError as ve:
                         # Недостаточно остатков на складе для списания/перемещения —
@@ -3573,48 +3604,60 @@ class ModernStartWindow:
                     self.load_invoices_list()
                     self.load_warehouse_data()
 
-                    op_name = op_type_var.get()
-                    self.logger.info(f"Создана накладная №{number}, тип={operation_type}, позиций={len(items_data)}")
+                    self.logger.info(f"Создана накладная №{number}, тип={operation_type}, позиций={len(items_data)}, проведена={post}")
 
-                    # ---- Автосохранение PDF-бланка накладной ----
+                    # ---- Автосохранение PDF-бланка накладной (только для проведённых) ----
                     pdf_path = None
-                    try:
-                        from modules.invoice_pdf import (
-                            generate_invoice_pdf, default_invoice_filename, get_invoices_dir
-                        )
-                        invoice = db_manager.get_invoice_details(invoice_id)
-                        saved_items = db_manager.get_invoice_items(invoice_id)
-                        invoices_dir = get_invoices_dir()
-                        pdf_path = os.path.join(invoices_dir, default_invoice_filename(invoice))
-                        if not generate_invoice_pdf(invoice, saved_items, pdf_path):
+                    if post:
+                        try:
+                            from modules.invoice_pdf import (
+                                generate_invoice_pdf, default_invoice_filename, get_invoices_dir
+                            )
+                            invoice = db_manager.get_invoice_details(invoice_id)
+                            saved_items = db_manager.get_invoice_items(invoice_id)
+                            invoices_dir = get_invoices_dir()
+                            pdf_path = os.path.join(invoices_dir, default_invoice_filename(invoice))
+                            if not generate_invoice_pdf(invoice, saved_items, pdf_path):
+                                pdf_path = None
+                        except Exception as pdf_err:
+                            self.logger.error(f"Не удалось автоматически сохранить PDF накладной: {pdf_err}")
                             pdf_path = None
-                    except Exception as pdf_err:
-                        self.logger.error(f"Не удалось автоматически сохранить PDF накладной: {pdf_err}")
-                        pdf_path = None
 
                     self.safe_destroy_dialog(dialog)
 
-                    if pdf_path:
+                    if post:
+                        if pdf_path:
+                            messagebox.showinfo("Успех",
+                                                f"Требование-накладная №{number} создана и проведена!\n\n"
+                                                f"Тип: {op_name}\n"
+                                                f"Позиций: {len(items_data)}\n"
+                                                f"ID документа: {invoice_id}\n\n"
+                                                f"Бланк PDF сохранён:\n{pdf_path}")
+                        else:
+                            messagebox.showwarning("Накладная проведена, но PDF не сохранён",
+                                                f"Требование-накладная №{number} проведена (ID: {invoice_id}),\n"
+                                                f"однако автоматически сохранить PDF-бланк не удалось.\n"
+                                                f"Вы можете экспортировать PDF вручную кнопкой «📄 PDF» "
+                                                f"в списке накладных.")
+                    else:
                         messagebox.showinfo("Успех",
-                                            f"Требование-накладная №{number} создана!\n\n"
+                                            f"Требование-накладная №{number} сохранена как черновик.\n\n"
                                             f"Тип: {op_name}\n"
                                             f"Позиций: {len(items_data)}\n"
                                             f"ID документа: {invoice_id}\n\n"
-                                            f"Бланк PDF сохранён:\n{pdf_path}")
-                    else:
-                        messagebox.showwarning("Накладная создана, но PDF не сохранён",
-                                            f"Требование-накладная №{number} создана (ID: {invoice_id}),\n"
-                                            f"однако автоматически сохранить PDF-бланк не удалось.\n"
-                                            f"Вы можете экспортировать PDF вручную кнопкой «📄 PDF» "
-                                            f"в списке накладных.")
+                                            f"Для проведения документа выберите её в списке и нажмите «✅ Провести».")
 
                 except Exception as e:
                     messagebox.showerror("Ошибка", f"Не удалось создать накладную:\n{str(e)}")
                     self.logger.error(f"Ошибка создания накладной: {e}")
 
-            save_btn = self.create_modern_button(button_frame, "✅ Провести накладную", save_invoice, 'success')
-            save_btn.pack(side='left', padx=10)
-            ToolTip(save_btn, "Сохранить документ и сразу провести его по складу: обновятся остатки (списание/приход/перемещение)")
+            post_btn = self.create_modern_button(button_frame, "✅ Провести накладную", lambda: save_invoice(post=True), 'success')
+            post_btn.pack(side='left', padx=10)
+            ToolTip(post_btn, "Сохранить документ и сразу провести его по складу: обновятся остатки (списание/приход/перемещение)")
+
+            draft_btn = self.create_modern_button(button_frame, "💾 Сохранить черновик", lambda: save_invoice(post=False), 'secondary')
+            draft_btn.pack(side='left', padx=10)
+            ToolTip(draft_btn, "Сохранить документ как черновик без изменения остатков; провести позже кнопкой «Провести» в списке")
 
             info_label = Label(
                 button_frame,
@@ -4048,6 +4091,49 @@ class ModernStartWindow:
         except Exception as e:
             self.logger.error(f"Ошибка просмотра накладной: {e}")
             messagebox.showerror("Ошибка", f"Не удалось открыть детали:\n{str(e)}")
+
+    def post_selected_invoice(self):
+        """Провести выбранную накладную из списка."""
+        try:
+            selection = self.invoices_tree.selection()
+            if not selection:
+                messagebox.showwarning("Внимание", "Выберите накладную для проведения")
+                return
+
+            values = self.invoices_tree.item(selection[0], 'values')
+            invoice_id = int(values[0])
+            invoice_number = values[1]
+            status_label = values[7] if len(values) > 7 else ''
+
+            if status_label not in ('', 'Черновик'):
+                messagebox.showinfo("Информация",
+                                    f"Накладная №{invoice_number} уже проведена или отменена.")
+                return
+
+            if not messagebox.askyesno(
+                "Подтверждение",
+                f"Провести накладную №{invoice_number}?\n\n"
+                "При проведении складские остатки изменятся согласно типу операции."
+            ):
+                return
+
+            try:
+                if db_manager.post_invoice(invoice_id):
+                    self.load_invoices_list()
+                    self.load_warehouse_data()
+                    messagebox.showinfo("Успех", f"Накладная №{invoice_number} проведена")
+                    self.logger.info(f"Проведена накладная №{invoice_number} (ID={invoice_id})")
+                else:
+                    messagebox.showwarning("Внимание",
+                                           f"Не удалось провести накладную №{invoice_number}.\n"
+                                           "Возможно, она уже проведена, отменена или не содержит позиций.")
+            except ValueError as ve:
+                messagebox.showerror("Недостаточно остатков", str(ve))
+                self.logger.warning(f"Накладная №{invoice_number} не проведена: {ve}")
+
+        except Exception as e:
+            self.logger.error(f"Ошибка проведения накладной: {e}")
+            messagebox.showerror("Ошибка", f"Не удалось провести накладную:\n{str(e)}")
 
     def delete_selected_invoice(self):
         """Удалить выбранную накладную"""
