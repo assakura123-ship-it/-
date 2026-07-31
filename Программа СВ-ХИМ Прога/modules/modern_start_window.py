@@ -1760,7 +1760,7 @@ class ModernStartWindow:
     def create_finished_products_tab(self):
         """Создание вкладки 'Готовая продукция' со спецификациями."""
         try:
-            FinishedProductsTab(self.master, self.notebook, self)
+            FinishedProductsTab(self.root, self.notebook, self)
             self.logger.debug("Вкладка 'Готовая продукция' создана успешно")
         except Exception as e:
             self.logger.error(f"Ошибка создания вкладки готовой продукции: {e}")
