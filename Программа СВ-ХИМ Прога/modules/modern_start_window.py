@@ -3802,8 +3802,12 @@ class ModernStartWindow:
             excel_btn.pack(side='left', padx=3)
             ToolTip(excel_btn, "Экспортировать текущий документ в Excel без сохранения в базу")
 
-            cancel_btn = self.create_modern_button(action_frame, "Отмена", lambda: self.safe_destroy_dialog(dialog), 'secondary')
-            cancel_btn.pack(side='right', padx=(8, 0))
+            # Кнопка «Отмена» — в одном ряду с остальными, чтобы всегда была видна
+            cancel_btn = self.create_modern_button(
+                btn_row, "❌ Отмена", lambda: self.safe_destroy_dialog(dialog), 'secondary'
+            )
+            cancel_btn.pack(side='right', padx=(12, 0))
+            ToolTip(cancel_btn, "Закрыть диалог без сохранения")
 
             self.logger.info("Открыт диалог создания/проведения накладной")
 
