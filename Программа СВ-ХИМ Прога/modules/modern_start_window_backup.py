@@ -78,204 +78,6 @@ class ToolTip:
             tw.destroy()
 
 
-
-
-class TabButton:
-    """Кнопка одной вкладки в кастомном таб-баре."""
-
-    def __init__(self, parent, text, tab_id, tab_manager, closable=True):
-        self.tab_id = tab_id
-        self.tab_manager = tab_manager
-        self.colors = tab_manager.colors
-        self.fonts = tab_manager.fonts
-        self.closable = closable
-
-        self.frame = Frame(parent, bg=self.colors['background'], padx=2, pady=2)
-
-        self.button = Label(
-            self.frame,
-            text=text,
-            font=self.fonts['caption'],
-            bg=self.colors['background'],
-            fg=self.colors['tab_unselected'],
-            padx=12,
-            pady=6,
-            cursor='hand2'
-        )
-        self.button.pack(side='left')
-
-        if closable:
-            self.close_label = Label(
-                self.frame,
-                text='×',
-                font=self.fonts['caption'],
-                bg=self.colors['background'],
-                fg=self.colors['text_muted'],
-                padx=6,
-                pady=6,
-                cursor='hand2'
-            )
-            self.close_label.pack(side='left')
-            self.close_label.bind('<Enter>', self._on_close_enter)
-            self.close_label.bind('<Leave>', self._on_close_leave)
-            self.close_label.bind('<Button-1>', self._on_close_click)
-
-        self.button.bind('<Button-1>', self._on_click)
-        self.button.bind('<Enter>', self._on_enter)
-        self.button.bind('<Leave>', self._on_leave)
-
-        self.text = text
-
-    def _on_click(self, event=None):
-        self.tab_manager.select_tab(self.tab_id)
-
-    def _on_enter(self, event=None):
-        if self.tab_manager.current_tab != self.tab_id:
-            self.button.config(bg=self.colors['hover'], fg=self.colors['tab_selected'])
-            if self.closable:
-                self.close_label.config(bg=self.colors['hover'])
-
-    def _on_leave(self, event=None):
-        self._update_style()
-
-    def _on_close_enter(self, event=None):
-        self.close_label.config(fg=self.colors['danger'])
-
-    def _on_close_leave(self, event=None):
-        self.close_label.config(fg=self.colors['text_muted'])
-
-    def _on_close_click(self, event=None):
-        self.tab_manager.close_tab(self.tab_id)
-        return 'break'
-
-    def set_text(self, text):
-        self.text = text
-        self.button.config(text=text)
-
-    def select(self):
-        self.frame.config(bg=self.colors['surface'])
-        self.button.config(
-            bg=self.colors['surface'],
-            fg=self.colors['tab_selected'],
-            font=(self.fonts['caption'][0], self.fonts['caption'][1], 'bold')
-        )
-        if self.closable:
-            self.close_label.config(bg=self.colors['surface'], fg=self.colors['text_muted'])
-
-    def deselect(self):
-        self.frame.config(bg=self.colors['background'])
-        self.button.config(
-            bg=self.colors['background'],
-            fg=self.colors['tab_unselected'],
-            font=self.fonts['caption']
-        )
-        if self.closable:
-            self.close_label.config(bg=self.colors['background'], fg=self.colors['text_muted'])
-
-    def _update_style(self):
-        if self.tab_manager.current_tab == self.tab_id:
-            self.select()
-        else:
-            self.deselect()
-
-
-class TabManager:
-    """Кастомный менеджер вкладок: главная вкладка фиксирована, остальные
-    открываются/закрываются как в браузере."""
-
-    def __init__(self, parent, root, colors, fonts, on_tab_change=None, on_tab_close=None):
-        self.parent = parent
-        self.root = root
-        self.colors = colors
-        self.fonts = fonts
-        self.on_tab_change = on_tab_change
-        self.on_tab_close = on_tab_close
-        self.current_tab = None
-        self.tabs = {}
-        self.counter = 0
-
-        # Верхняя панель вкладок
-        self.tab_bar = Frame(parent, bg=colors['background'], height=36)
-        self.tab_bar.pack(fill='x', side='top')
-        self.tab_bar.pack_propagate(False)
-
-        # Разделитель
-        self.separator = Frame(parent, height=1, bg=colors['border'])
-        self.separator.pack(fill='x', side='top')
-
-        # Область содержимого
-        self.content_area = Frame(parent, bg=colors['background'])
-        self.content_area.pack(fill='both', expand=True, side='top')
-
-    def add_tab(self, tab_id, text, content_frame, closable=True, select=True):
-        """Добавить новую вкладку. Если tab_id уже есть — просто активировать."""
-        if tab_id in self.tabs:
-            if select:
-                self.select_tab(tab_id)
-            return self.tabs[tab_id]['frame']
-
-        tab_button = TabButton(self.tab_bar, text, tab_id, self, closable=closable)
-        tab_button.frame.pack(side='left', padx=(4, 0), pady=(4, 0))
-
-        content_frame.pack(in_=self.content_area, fill='both', expand=True)
-        content_frame.pack_forget()
-
-        self.tabs[tab_id] = {
-            'frame': content_frame,
-            'button': tab_button,
-            'text': text,
-            'closable': closable,
-        }
-
-        if select or self.current_tab is None:
-            self.select_tab(tab_id)
-
-        return content_frame
-
-    def select_tab(self, tab_id):
-        if tab_id not in self.tabs:
-            return
-
-        for tid, info in self.tabs.items():
-            if tid == tab_id:
-                info['frame'].pack(fill='both', expand=True)
-                info['button'].select()
-            else:
-                info['frame'].pack_forget()
-                info['button'].deselect()
-
-        self.current_tab = tab_id
-
-        if self.on_tab_change:
-            self.on_tab_change(tab_id, self.tabs[tab_id]['text'])
-
-    def close_tab(self, tab_id):
-        if tab_id not in self.tabs or not self.tabs[tab_id]['closable']:
-            return
-
-        if self.on_tab_close:
-            self.on_tab_close(tab_id)
-
-        info = self.tabs.pop(tab_id)
-        info['button'].frame.destroy()
-        info['frame'].destroy()
-
-        if self.current_tab == tab_id:
-            if self.tabs:
-                self.select_tab(list(self.tabs.keys())[0])
-
-    def get_tab_text(self, tab_id):
-        return self.tabs.get(tab_id, {}).get('text', '')
-
-    def set_tab_text(self, tab_id, text):
-        if tab_id in self.tabs:
-            self.tabs[tab_id]['text'] = text
-            self.tabs[tab_id]['button'].set_text(text)
-
-    def get_current_tab(self):
-        return self.current_tab
-
-
 class ModernStartWindow:
     def __init__(self, root):
         self.root = root
@@ -326,6 +128,7 @@ class ModernStartWindow:
 
         self.center_window()
         self.create_widgets()
+        self.load_saved_cards()
         self.logger.info("Современный интерфейс успешно инициализирован")
 
     # ===================== НАСТРОЙКА СТИЛЕЙ =====================
@@ -744,19 +547,24 @@ class ModernStartWindow:
             main_frame = Frame(self.root, bg=self.colors['background'])
             main_frame.pack(fill='both', expand=True, padx=24, pady=(16, 20))
 
-            # Кастомный менеджер вкладок: главная фиксирована, остальные
-            # открываются по кнопкам на главной и закрываются как в браузере.
-            self.tab_manager = TabManager(main_frame, self.root, self.colors, self.fonts,
-                                           on_tab_change=self.on_tab_changed,
-                                           on_tab_close=self.on_tab_closed)
+            self.notebook = ttk.Notebook(main_frame, style="TNotebook")
+            self.notebook.pack(fill='both', expand=True)
 
-            # Создаем вкладки. Главная открывается всегда, остальные можно
-            # открывать из меню быстрого доступа на главной.
+            # Создаем вкладки
             # Примечание: отдельная вкладка "Продукты" удалена — "Номенклатура"
             # теперь является единственным (расширенным) справочником продуктов:
             # каждая позиция дерева номенклатуры одновременно хранит код,
             # наименование и служит записью в products (см. database.py).
             self.create_home_tab()
+            self.create_cards_tab()
+            self.create_warehouse_tab()
+            self.create_nomenclature_tab()
+            self.create_invoice_tab()
+            self.create_logs_tab()
+            self.create_import_export_tab()
+            self.create_finished_products_tab()
+
+            self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_changed)
 
             footer_frame = Frame(self.root,
                                  bg=self.colors['surface'],
@@ -792,10 +600,10 @@ class ModernStartWindow:
     # ===================== ВКЛАДКИ =====================
 
     def create_home_tab(self):
-        """Создание главной вкладки в современном стиле (фиксированная)."""
+        """Создание главной вкладки в современном стиле"""
         try:
-            home_tab = Frame(self.tab_manager.content_area, bg=self.colors['background'])
-            self.tab_manager.add_tab("home", "🏠 Главная", home_tab, closable=False, select=True)
+            home_tab = Frame(self.notebook, bg=self.colors['background'])
+            self.notebook.add(home_tab, text="🏠 Главная")
 
             canvas = tk.Canvas(home_tab, bg=self.colors['background'], highlightthickness=0)
             scrollbar = Scrollbar(home_tab, orient='vertical', command=canvas.yview)
@@ -844,19 +652,15 @@ class ModernStartWindow:
                   bg=self.colors['background'],
                   fg=self.colors['on_background']).pack(anchor='w', pady=(0, 20))
 
-            # Кнопки открывают модули в новых закрываемых вкладках.
-            # Если вкладка уже открыта — просто переключается на неё.
             quick_buttons = [
                 ("📄 Создать карту", self.open_editor_tab, 'primary'),
-                ("📋 Просмотр карт", self.open_cards_tab, 'secondary'),
-                ("🏭 Управление складом", self.open_warehouse_tab, 'secondary'),
+                ("📋 Просмотр карт", lambda: self.notebook.select(1), 'secondary'),
+                ("🏭 Управление складом", lambda: self.notebook.select(2), 'secondary'),
                 ("🧪 Потребность сырья", self.open_raw_material_requirement, 'secondary'),
                 ("🧴 Потребность готовой продукции", self.open_finished_product_requirement, 'secondary'),
-                ("🗂️ Номенклатура", self.open_nomenclature_tab, 'secondary'),
-                ("📄 Требование-накладная", self.open_invoice_tab, 'secondary'),
-                ("📦 Готовая продукция", self.open_finished_products_tab, 'secondary'),
-                ("📤 Импорт/Экспорт", self.open_import_export_tab, 'secondary'),
-                ("📊 Системные логи", self.open_logs_tab, 'secondary')
+                ("🗂️ Номенклатура", lambda: self.notebook.select(3), 'secondary'),
+                ("📤 Импорт/Экспорт", lambda: self.notebook.select(5), 'secondary'),
+                ("📊 Системные логи", lambda: self.notebook.select(4), 'secondary')
             ]
 
             grid_frame = Frame(quick_access_frame, bg=self.colors['background'])
@@ -880,83 +684,11 @@ class ModernStartWindow:
             self.logger.error(f"Ошибка создания главной вкладки: {e}")
             raise
 
-
-    # ===================== ОТКРЫТИЕ ВКЛАДОК =====================
-
-    def open_cards_tab(self):
-        """Открыть вкладку 'Карты загрузок' (или переключиться, если уже открыта)."""
-        if self.tab_manager.tabs.get('cards'):
-            self.tab_manager.select_tab('cards')
-            return
-        cards_tab = self.create_cards_tab()
-        self.tab_manager.add_tab("cards", "📋 Карты загрузок", cards_tab, closable=True, select=True)
-        self.load_saved_cards()
-        self.logger.info("Открыта вкладка: Карты загрузок")
-
-    def open_warehouse_tab(self):
-        """Открыть вкладку 'Склад'."""
-        if self.tab_manager.tabs.get('warehouse'):
-            self.tab_manager.select_tab('warehouse')
-            return
-        warehouse_tab = self.create_warehouse_tab()
-        self.tab_manager.add_tab("warehouse", "🏭 Склад", warehouse_tab, closable=True, select=True)
-        self.load_warehouse_data()
-        self.logger.info("Открыта вкладка: Склад")
-
-    def open_nomenclature_tab(self):
-        """Открыть вкладку 'Номенклатура'."""
-        if self.tab_manager.tabs.get('nomenclature'):
-            self.tab_manager.select_tab('nomenclature')
-            return
-        nom_tab = self.create_nomenclature_tab()
-        self.tab_manager.add_tab("nomenclature", "🗂️ Номенклатура", nom_tab, closable=True, select=True)
-        self.load_nomenclature_tree()
-        self.logger.info("Открыта вкладка: Номенклатура")
-
-    def open_logs_tab(self):
-        """Открыть вкладку 'Логи'."""
-        if self.tab_manager.tabs.get('logs'):
-            self.tab_manager.select_tab('logs')
-            return
-        logs_tab = self.create_logs_tab()
-        self.tab_manager.add_tab("logs", "📊 Логи", logs_tab, closable=True, select=True)
-        self.load_log_files()
-        self.logger.info("Открыта вкладка: Логи")
-
-    def open_import_export_tab(self):
-        """Открыть вкладку 'Импорт/Экспорт'."""
-        if self.tab_manager.tabs.get('import_export'):
-            self.tab_manager.select_tab('import_export')
-            return
-        import_tab = self.create_import_export_tab()
-        self.tab_manager.add_tab("import_export", "📤 Импорт/Экспорт", import_tab, closable=True, select=True)
-        self.logger.info("Открыта вкладка: Импорт/Экспорт")
-
-    def open_finished_products_tab(self):
-        """Открыть вкладку 'Готовая продукция'."""
-        if self.tab_manager.tabs.get('finished_products'):
-            self.tab_manager.select_tab('finished_products')
-            return
-        fp_tab = self.create_finished_products_tab()
-        self.tab_manager.add_tab("finished_products", "📦 Готовая продукция", fp_tab, closable=True, select=True)
-        self.logger.info("Открыта вкладка: Готовая продукция")
-
-    def open_invoice_tab(self):
-        """Открыть вкладку 'Требование-накладная'."""
-        if self.tab_manager.tabs.get('invoice'):
-            self.tab_manager.select_tab('invoice')
-            return
-        inv_tab = self.create_invoice_tab()
-        self.tab_manager.add_tab("invoice", "📄 Требование-накладная", inv_tab, closable=True, select=True)
-        self.load_invoices_list()
-        self.logger.info("Открыта вкладка: Требование-накладная")
-
-    def create_cards_tab(self, parent=None):
+    def create_cards_tab(self):
         """Создание вкладки карт загрузок в современном стиле"""
         try:
-            if parent is None:
-                parent = self.tab_manager.content_area
-            cards_tab = Frame(parent, bg=self.colors['background'])
+            cards_tab = Frame(self.notebook, bg=self.colors['background'])
+            self.notebook.add(cards_tab, text="📋 Карты загрузок")
 
             container = Frame(cards_tab, bg=self.colors['background'])
             container.pack(fill='both', expand=True, padx=20, pady=20)
@@ -1015,18 +747,16 @@ class ModernStartWindow:
             self.cards_tree.bind('<Double-Button-1>', lambda e: self.view_card_details())
 
             self.logger.debug("Вкладка 'Карты загрузок' создана успешно")
-            return cards_tab
 
         except Exception as e:
             self.logger.error(f"Ошибка создания вкладки карт: {e}")
             raise
 
-    def create_warehouse_tab(self, parent=None):
+    def create_warehouse_tab(self):
         """Создание вкладки склада в современном стиле"""
         try:
-            if parent is None:
-                parent = self.tab_manager.content_area
-            warehouse_tab = Frame(parent, bg=self.colors['background'])
+            warehouse_tab = Frame(self.notebook, bg=self.colors['background'])
+            self.notebook.add(warehouse_tab, text="🏭 Склад")
 
             container = Frame(warehouse_tab, bg=self.colors['background'])
             container.pack(fill='both', expand=True, padx=20, pady=20)
@@ -1127,13 +857,12 @@ class ModernStartWindow:
             self.load_warehouse_data()
 
             self.logger.debug("Вкладка 'Склад' создана успешно")
-            return warehouse_tab
 
         except Exception as e:
             self.logger.error(f"Ошибка создания вкладки склада: {e}")
             raise
 
-    def create_nomenclature_tab(self, parent=None):
+    def create_nomenclature_tab(self):
         """Создание вкладки 'Номенклатура' — иерархия папок/групп и позиций.
 
         Позволяет строить произвольную вложенность папок ("масла", "цех 2",
@@ -1146,9 +875,8 @@ class ModernStartWindow:
         try:
             from modules.excel_template_processor import ExcelTemplateProcessor
 
-            if parent is None:
-                parent = self.tab_manager.content_area
-            nom_tab = Frame(parent, bg=self.colors['background'])
+            nom_tab = Frame(self.notebook, bg=self.colors['background'])
+            self.notebook.add(nom_tab, text="🗂️ Номенклатура")
 
             container = Frame(nom_tab, bg=self.colors['background'])
             container.pack(fill='both', expand=True, padx=20, pady=20)
@@ -1249,7 +977,6 @@ class ModernStartWindow:
             self.load_nomenclature_tree()
 
             self.logger.debug("Вкладка 'Номенклатура' создана успешно")
-            return nom_tab
 
         except Exception as e:
             self.logger.error(f"Ошибка создания вкладки номенклатуры: {e}")
@@ -1801,12 +1528,11 @@ class ModernStartWindow:
         return options
 
 
-    def create_logs_tab(self, parent=None):
+    def create_logs_tab(self):
         """Создание вкладки логов в современном стиле"""
         try:
-            if parent is None:
-                parent = self.tab_manager.content_area
-            logs_tab = Frame(parent, bg=self.colors['background'])
+            logs_tab = Frame(self.notebook, bg=self.colors['background'])
+            self.notebook.add(logs_tab, text="📊 Логи")
 
             container = Frame(logs_tab, bg=self.colors['background'])
             container.pack(fill='both', expand=True, padx=20, pady=20)
@@ -1946,7 +1672,6 @@ class ModernStartWindow:
             self.load_log_files()
 
             self.logger.debug("Вкладка 'Логи' создана успешно")
-            return logs_tab
 
         except Exception as e:
             self.logger.error(f"Ошибка создания вкладки логов: {e}")
@@ -2002,12 +1727,11 @@ class ModernStartWindow:
 
         return scrollable_frame
 
-    def create_import_export_tab(self, parent=None):
+    def create_import_export_tab(self):
         """Создание вкладки импорта/экспорта в современном стиле"""
         try:
-            if parent is None:
-                parent = self.tab_manager.content_area
-            import_tab = Frame(parent, bg=self.colors['background'])
+            import_tab = Frame(self.notebook, bg=self.colors['background'])
+            self.notebook.add(import_tab, text="📤 Импорт/Экспорт")
 
             main_notebook = ttk.Notebook(import_tab)
             main_notebook.pack(fill='both', expand=True, padx=20, pady=20)
@@ -2028,22 +1752,16 @@ class ModernStartWindow:
             self.create_import_export_content(norms_scrollable, is_norms=True)
 
             self.logger.debug("Вкладка 'Импорт/Экспорт' создана успешно")
-            return import_tab
 
         except Exception as e:
             self.logger.error(f"Ошибка создания вкладки импорта/экспорта: {e}")
             raise
 
-    def create_finished_products_tab(self, parent=None):
+    def create_finished_products_tab(self):
         """Создание вкладки 'Готовая продукция' со спецификациями."""
         try:
-            if parent is None:
-                parent = self.tab_manager.content_area
-            fp_tab = Frame(parent, bg=self.colors['background'])
-            fp_tab.pack(fill='both', expand=True)
-            FinishedProductsTab(fp_tab, self)
+            FinishedProductsTab(self.root, self.notebook, self)
             self.logger.debug("Вкладка 'Готовая продукция' создана успешно")
-            return fp_tab
         except Exception as e:
             self.logger.error(f"Ошибка создания вкладки готовой продукции: {e}")
             raise
@@ -2855,10 +2573,8 @@ class ModernStartWindow:
                                         user="user")
 
             tab_id = f"editor_{len(self.open_editors) + 1}"
-            tab_title = f"📝 РЕДАКТОР {len(self.open_editors) + 1}"
 
-            tab_frame = Frame(self.tab_manager.content_area, bg=self.colors['background'])
-            self.tab_manager.add_tab(tab_id, tab_title, tab_frame, closable=True)
+            tab_frame = Frame(self.notebook, bg=self.colors['background'])
 
             try:
                 from modules.loading_card_tab import LoadingCardTab
@@ -2866,18 +2582,20 @@ class ModernStartWindow:
                 editor.pack(fill='both', expand=True)
             except ImportError as e:
                 self.logger.error(f"Не удалось импортировать LoadingCardTab: {e}")
-                self.tab_manager.close_tab(tab_id)
                 messagebox.showwarning("Предупреждение",
                                        "Модуль редактора карт не найден. Функционал будет доступен после установки.")
                 return
             except Exception as e:
                 self.logger.error(f"Ошибка создания редактора: {e}")
-                self.tab_manager.close_tab(tab_id)
                 messagebox.showerror("Ошибка", f"Не удалось создать редактор:\n{str(e)}")
                 return
 
+            tab_title = f"📝 РЕДАКТОР {len(self.open_editors) + 1}"
+            self.notebook.add(tab_frame, text=tab_title)
+
+            self.notebook.select(tab_frame)
+
             self.open_editors[tab_id] = editor
-            self.tab_manager.select_tab(tab_id)
 
             self.status_label.config(text=f"Открыт редактор {len(self.open_editors)}")
             self.logger.info(f"Открыта новая вкладка редактора: {tab_title}")
@@ -2892,49 +2610,51 @@ class ModernStartWindow:
             self.logger.error(f"Ошибка открытия редактора: {e}")
             system_logger.log_error_with_traceback("Ошибка открытия редактора", e)
 
-    def close_editor_tab(self, tab_id):
-        """Закрыть вкладку редактора по идентификатору"""
+    def close_editor_tab(self, tab_frame):
+        """Закрыть вкладку редактора"""
         try:
-            if tab_id in self.open_editors:
-                del self.open_editors[tab_id]
+            # Находим индекс вкладки в notebook
+            for i in range(self.notebook.index('end')):
+                if self.notebook.nametowidget(self.notebook.tabs()[i]) == tab_frame:
+                    # Удаляем вкладку из notebook
+                    self.notebook.forget(i)
 
-            self.tab_manager.close_tab(tab_id)
+                    # Удаляем редактор из словаря открытых редакторов
+                    for tab_id, editor in list(self.open_editors.items()):
+                        if editor.master == tab_frame:
+                            del self.open_editors[tab_id]
+                            break
 
-            self.logger.info(f"Вкладка редактора {tab_id} закрыта. Осталось {len(self.open_editors)} вкладок.")
+                    self.logger.info(f"Вкладка редактора закрыта. Осталось {len(self.open_editors)} вкладок.")
+                    break
 
         except Exception as e:
             self.logger.error(f"Ошибка закрытия вкладки редактора: {e}")
             messagebox.showerror("Ошибка", f"Не удалось закрыть вкладку:\n{str(e)}")
 
-    def on_tab_changed(self, tab_id, tab_text):
-        """Обработчик изменения вкладки (вызывается TabManager)"""
+    def on_tab_changed(self, event):
+        """Обработчик изменения вкладки"""
         try:
+            current_tab = self.notebook.select()
+            if current_tab:
+                tab_index = self.notebook.index(current_tab)
+                tab_text = self.notebook.tab(tab_index, "text")
 
-            status_texts = {
-                "home": "Главная страница • Готов к работе",
-                "cards": "Просмотр карт загрузок",
-                "warehouse": "Управление складом",
-                "nomenclature": "Справочник номенклатуры (продуктов)",
-                "logs": "Просмотр системных логов",
-                "import_export": "Импорт и экспорт данных",
-                "finished_products": "Управление готовой продукцией",
-                "invoice": "Формирование счетов"
-            }
+                status_texts = {
+                    "🏠 Главная": "Главная страница • Готов к работе",
+                    "📋 Карты загрузок": "Просмотр карт загрузок",
+                    "🏭 Склад": "Управление складом",
+                    "🗂️ Номенклатура": "Справочник номенклатуры (продуктов)",
+                    "📊 Логи": "Просмотр системных логов",
+                    "📤 Импорт/Экспорт": "Импорт и экспорт данных"
+                }
 
-            self.status_label.config(text=status_texts.get(tab_id, "Готов к работе"))
-            self.logger.debug(f"Переключена вкладка: {tab_text} ({tab_id})")
+                self.status_label.config(text=status_texts.get(tab_text, "Готов к работе"))
+
+                self.logger.debug(f"Переключена вкладка: {tab_text}")
 
         except Exception as e:
             self.logger.error(f"Ошибка обработки переключения вкладки: {e}")
-
-    def on_tab_closed(self, tab_id):
-        """Обработчик закрытия вкладки (вызывается TabManager)"""
-        try:
-            if tab_id in self.open_editors:
-                del self.open_editors[tab_id]
-                self.logger.info(f"Редактор {tab_id} удален из списка открытых")
-        except Exception as e:
-            self.logger.error(f"Ошибка обработки закрытия вкладки: {e}")
 
     # ===================== МЕТОДЫ ДЛЯ РАБОТЫ С ЛОГАМИ =====================
 
@@ -3462,12 +3182,11 @@ class ModernStartWindow:
 
     # ===================== ВКЛАДКА ТРЕБОВАНИЕ-НАКЛАДНАЯ =====================
 
-    def create_invoice_tab(self, parent=None):
+    def create_invoice_tab(self):
         """Создание вкладки требования-накладной"""
         try:
-            if parent is None:
-                parent = self.tab_manager.content_area
-            inv_tab = Frame(parent, bg=self.colors['background'])
+            inv_tab = Frame(self.notebook, bg=self.colors['background'])
+            self.notebook.add(inv_tab, text="📄 Требование-накладная")
 
             container = Frame(inv_tab, bg=self.colors['background'])
             container.pack(fill='both', expand=True, padx=20, pady=20)
@@ -3606,7 +3325,6 @@ class ModernStartWindow:
             self.load_invoices_list()
 
             self.logger.debug("Вкладка 'Требование-накладная' создана успешно")
-            return inv_tab
 
         except Exception as e:
             self.logger.error(f"Ошибка создания вкладки накладных: {e}")

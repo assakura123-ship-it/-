@@ -12,9 +12,8 @@ from modules.logger import system_logger, log_operation, LogLevel
 class FinishedProductsTab:
     """Вкладка «Готовая продукция» со спецификациями (тара, упаковка и т.д.)."""
 
-    def __init__(self, master, notebook, start_window):
+    def __init__(self, master, start_window):
         self.master = master
-        self.notebook = notebook
         self.start_window = start_window
         self.logger = system_logger.get_logger('FinishedProductsTab')
         self.create_tab()
@@ -22,8 +21,8 @@ class FinishedProductsTab:
     def create_tab(self):
         """Создание вкладки готовой продукции."""
         try:
-            self.tab = Frame(self.notebook, bg='white')
-            self.notebook.add(self.tab, text="🏭 ГОТОВАЯ ПРОДУКЦИЯ")
+            self.tab = Frame(self.master, bg='white')
+            self.tab.pack(fill='both', expand=True)
 
             self.create_header()
             self.create_controls()
