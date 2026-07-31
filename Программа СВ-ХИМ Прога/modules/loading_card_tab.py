@@ -86,31 +86,23 @@ class LoadingCardTab(Frame):
 
             canvas.bind_all("<MouseWheel>", _on_mousewheel)
 
-            # Заголовок вкладки с кнопкой закрытия
-            header_frame = Frame(scrollable_frame, bg='#0F172A', height=80)
-            header_frame.pack(fill='x', pady=(0, 20))
+            # Компактный строгий заголовок вкладки
+            header_frame = Frame(scrollable_frame, bg=COLORS['surface'], height=44)
+            header_frame.pack(fill='x', pady=(0, 16))
             header_frame.pack_propagate(False)
 
-            # Левая часть: название
-            title_frame = Frame(header_frame, bg='#0F172A')
-            title_frame.pack(side='left', fill='both', expand=True)
+            Label(header_frame, text="Редактор карт загрузок",
+                  font=('Segoe UI', 12, 'bold'), bg=COLORS['surface'], fg=COLORS['on_surface']).pack(side='left', padx=16, pady=10)
 
-            Label(title_frame, text="📋 РЕДАКТОР КАРТ ЗАГРУЗОК (SQLite)",
-                  font=('Segoe UI', 20, 'bold'), bg='#0F172A', fg='white').pack(pady=20)
-
-            # Правая часть: кнопка закрытия
-            close_frame = Frame(header_frame, bg='#0F172A')
-            close_frame.pack(side='right', padx=20)
-
-            close_btn = Button(close_frame, text="✕ ЗАКРЫТЬ ВКЛАДКУ",
+            close_btn = Button(header_frame, text="✕",
                                command=self.close_tab,
-                               bg='#DC2626', fg='white',
+                               bg=COLORS['surface'], fg=COLORS['text_muted'],
                                font=('Segoe UI', 10, 'bold'),
-                               padx=10, pady=5,
+                               bd=0, padx=8, pady=2,
                                cursor="hand2")
-            close_btn.pack(pady=20)
-            close_btn.bind("<Enter>", lambda e: close_btn.config(bg='#B91C1C'))
-            close_btn.bind("<Leave>", lambda e: close_btn.config(bg='#DC2626'))
+            close_btn.pack(side='right', padx=10)
+            close_btn.bind("<Enter>", lambda e: close_btn.config(fg=COLORS['danger']))
+            close_btn.bind("<Leave>", lambda e: close_btn.config(fg=COLORS['text_muted']))
 
             # Панель управления
             control_frame = Frame(scrollable_frame, bg='#F8FAFC')
