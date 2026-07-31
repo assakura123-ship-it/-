@@ -198,7 +198,7 @@ class ModernStartWindow:
         _configure_button("Warning.TButton", colors['warning'], colors['text_on_accent'],
                            colors['warning_hover'], colors['warning_pressed'])
 
-        # Вторичная кнопка — контурная, на фоне поверхности
+            # Вторичная кнопка — контурная, на фоне поверхности
         style.configure(
             "Secondary.TButton",
             padding=[16, 10],
@@ -213,7 +213,8 @@ class ModernStartWindow:
         style.map(
             "Secondary.TButton",
             background=[("active", colors['hover']), ("pressed", colors['border'])],
-            bordercolor=[("active", colors['primary'])]
+            foreground=[("active", colors['on_surface']), ("pressed", colors['on_surface'])],
+            bordercolor=[("active", colors['primary']), ("pressed", colors['primary'])]
         )
 
         # Компактная кнопка (панели инструментов / тулбары)
@@ -3371,7 +3372,7 @@ class ModernStartWindow:
             warehouse_map = {w['component_code']: w for w in warehouse_items}
 
             dialog, main_frame = self.create_dialog(
-                "Создание требования-накладной", 900, 700,
+                "Создание требования-накладной", 950, 780,
                 header_color=self.colors['primary']
             )
             dialog.resizable(True, True)
@@ -3524,7 +3525,21 @@ class ModernStartWindow:
 
             # ===== НИЖНИЕ КНОПКИ =====
             button_frame = Frame(main_frame, bg=self.colors['background'])
-            button_frame.pack(fill='x', pady=(0, 5))
+            button_frame.pack(fill='x', pady=(10, 5))
+
+            # Подсказка в отдельной строке, чтобы не перекрывать кнопки
+            info_label = Label(
+                button_frame,
+                text="При проведении документа складские остатки изменятся согласно типу операции",
+                font=self.fonts['caption'],
+                bg=self.colors['background'],
+                fg=self.colors['text_muted']
+            )
+            info_label.pack(side='top', anchor='w', pady=(0, 8))
+
+            # Фрейм, в котором располагаются кнопки действий
+            action_frame = Frame(button_frame, bg=self.colors['background'])
+            action_frame.pack(fill='x')
 
             def collect_invoice_data():
                 """Собрать данные накладной из полей диалога."""
@@ -3637,7 +3652,7 @@ class ModernStartWindow:
                             messagebox.showwarning("Накладная проведена, но PDF не сохранён",
                                                 f"Требование-накладная №{number} проведена (ID: {invoice_id}),\n"
                                                 f"однако автоматически сохранить PDF-бланк не удалось.\n"
-                                                f"Вы можете экспортировать PDF вручную кнопкой «📄 PDF» "
+                                                f"Вы можете экспортировать PDF вручную кнопкой «PDF» "
                                                 f"в списке накладных.")
                     else:
                         messagebox.showinfo("Успех",
@@ -3645,31 +3660,22 @@ class ModernStartWindow:
                                             f"Тип: {op_name}\n"
                                             f"Позиций: {len(items_data)}\n"
                                             f"ID документа: {invoice_id}\n\n"
-                                            f"Для проведения документа выберите её в списке и нажмите «✅ Провести».")
+                                            f"Для проведения документа выберите её в списке и нажмите «Провести».")
 
                 except Exception as e:
                     messagebox.showerror("Ошибка", f"Не удалось создать накладную:\n{str(e)}")
                     self.logger.error(f"Ошибка создания накладной: {e}")
 
-            post_btn = self.create_modern_button(button_frame, "✅ Провести накладную", lambda: save_invoice(post=True), 'success')
-            post_btn.pack(side='left', padx=10)
+            post_btn = self.create_modern_button(action_frame, "Провести накладную", lambda: save_invoice(post=True), 'success')
+            post_btn.pack(side='left', padx=(0, 8))
             ToolTip(post_btn, "Сохранить документ и сразу провести его по складу: обновятся остатки (списание/приход/перемещение)")
 
-            draft_btn = self.create_modern_button(button_frame, "💾 Сохранить черновик", lambda: save_invoice(post=False), 'secondary')
-            draft_btn.pack(side='left', padx=10)
+            draft_btn = self.create_modern_button(action_frame, "Сохранить черновик", lambda: save_invoice(post=False), 'secondary')
+            draft_btn.pack(side='left', padx=8)
             ToolTip(draft_btn, "Сохранить документ как черновик без изменения остатков; провести позже кнопкой «Провести» в списке")
 
-            info_label = Label(
-                button_frame,
-                text="При проведении документа складские остатки изменятся согласно типу операции",
-                font=self.fonts['caption'],
-                bg=self.colors['background'],
-                fg=self.colors['text_muted']
-            )
-            info_label.pack(side='left', padx=(10, 0))
-
-            cancel_btn = self.create_modern_button(button_frame, "Отмена", lambda: self.safe_destroy_dialog(dialog), 'secondary')
-            cancel_btn.pack(side='right', padx=10)
+            cancel_btn = self.create_modern_button(action_frame, "Отмена", lambda: self.safe_destroy_dialog(dialog), 'secondary')
+            cancel_btn.pack(side='right', padx=(8, 0))
 
             self.logger.info("Открыт диалог создания/проведения накладной")
 
