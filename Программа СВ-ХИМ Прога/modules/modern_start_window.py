@@ -5084,6 +5084,8 @@ class ModernStartWindow:
                                       lambda: self._fpr_remove_from_cart(dialog), 'danger').pack(side='left', padx=3)
             self.create_modern_button(btn_frame, "🧮 Потребность",
                                       lambda: self._fpr_show_requirements(dialog), 'primary').pack(side='left', padx=3)
+            self.create_modern_button(btn_frame, "📉 Дефицит ГП",
+                                      lambda: self._fpr_calculate_deficit(dialog), 'warning').pack(side='left', padx=3)
 
             cart_card = LabelFrame(right_frame, text="Корзина производства",
                                  font=self.fonts['body_semibold'],
@@ -5154,6 +5156,159 @@ class ModernStartWindow:
         except Exception as e:
             self.logger.error(f"Ошибка открытия диалога потребности готовой продукции: {e}")
             messagebox.showerror("Ошибка", f"Не удалось открыть диалог:\n{str(e)}")
+
+    def _fpr_calculate_deficit(self, parent_dialog):
+        """Рассчитать дефицит готовой продукции из Excel по отрицательным конечным остаткам."""
+        try:
+            file_path = filedialog.askopenfilename(
+                parent=parent_dialog,
+                title="Выберите файл Дефицит по готовой продукции",
+                filetypes=[("Excel файлы", "*.xlsx *.xls"), ("Все файлы", "*.*")]
+            )
+            if not file_path:
+                return
+
+            df = pd.read_excel(file_path)
+            if df.empty:
+                messagebox.showinfo("Информация", "Файл пуст", parent=parent_dialog)
+                return
+
+            # Нормализация заголовков
+            header_map = {
+                'код гп': 'КОД ГП',
+                'наименование гп': 'Наименование ГП',
+                'бренд': 'Бренд',
+                'нач. остаток': 'Нач. остаток',
+                'расход': 'Расход',
+                'кон. остаток': 'Кон. Остаток',
+                'кон остаток': 'Кон. Остаток',
+                'кон.остаток': 'Кон. Остаток',
+            }
+            df.columns = [str(c).strip() for c in df.columns]
+            normalized = {}
+            for col in df.columns:
+                key = col.lower().replace('ё', 'е')
+                normalized[col] = header_map.get(key, col)
+            df.rename(columns=normalized, inplace=True)
+
+            required = ['КОД ГП', 'Наименование ГП', 'Бренд', 'Нач. остаток', 'Расход', 'Кон. Остаток']
+            missing = [c for c in required if c not in df.columns]
+            if missing:
+                messagebox.showerror(
+                    "Ошибка",
+                    f"В файле отсутствуют столбцы: {', '.join(missing)}\n\nНайденные столбцы: {', '.join(df.columns)}",
+                    parent=parent_dialog
+                )
+                return
+
+            # Приведение к числовому типу
+            for col in ['Нач. остаток', 'Расход', 'Кон. Остаток']:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+
+            # Оставляем только строки с отрицательным конечным остатком
+            deficit_df = df[df['Кон. Остаток'] < 0].copy()
+            # Сортируем по величине дефицита (наибольший по модулю вверху)
+            deficit_df = deficit_df.sort_values(by='Кон. Остаток', ascending=True).reset_index(drop=True)
+
+            if deficit_df.empty:
+                messagebox.showinfo(
+                    "Дефицит ГП",
+                    "Отрицательных конечных остатков не найдено. Дефицит отсутствует.",
+                    parent=parent_dialog
+                )
+                return
+
+            # Суммарный дефицит по модулю
+            total_deficit = abs(deficit_df['Кон. Остаток'].sum())
+            rows = deficit_df[required].copy()
+            rows['Дефицит (модуль)'] = rows['Кон. Остаток'].abs()
+
+            self._fpr_show_deficit_window(parent_dialog, rows, total_deficit)
+            self.logger.info(f"Дефицит ГП рассчитан: {len(rows)} позиций, суммарный дефицит {total_deficit:.2f}")
+
+        except Exception as e:
+            self.logger.error(f"Ошибка расчёта дефицита ГП: {e}")
+            messagebox.showerror("Ошибка", f"Не удалось рассчитать дефицит:\n{str(e)}", parent=parent_dialog)
+
+    def _fpr_show_deficit_window(self, parent_dialog, rows_df, total_deficit):
+        """Показать окно с результатами дефицита готовой продукции."""
+        dlg = tk.Toplevel(parent_dialog)
+        dlg.title("Дефицит по готовой продукции")
+        dlg.geometry("1100x650")
+        dlg.configure(bg=self.colors['background'])
+        dlg.transient(parent_dialog)
+        dlg.resizable(True, True)
+
+        top_frame = Frame(dlg, bg=self.colors['background'])
+        top_frame.pack(fill='x', padx=10, pady=10)
+
+        Label(top_frame,
+              text=f"Всего позиций с дефицитом: {len(rows_df)}    Суммарный дефицит: {total_deficit:.2f}",
+              font=self.fonts['body_semibold'],
+              bg=self.colors['background'],
+              fg=self.colors['text']).pack(side='left')
+
+        tree_frame = Frame(dlg, bg=self.colors['background'])
+        tree_frame.pack(fill='both', expand=True, padx=10, pady=(0, 10))
+
+        tree = ttk.Treeview(tree_frame,
+                            columns=('code', 'name', 'brand', 'start', 'expense', 'ending', 'deficit_abs'),
+                            show='headings', height=20)
+        tree.heading('code', text='КОД ГП')
+        tree.heading('name', text='Наименование ГП')
+        tree.heading('brand', text='Бренд')
+        tree.heading('start', text='Нач. остаток')
+        tree.heading('expense', text='Расход')
+        tree.heading('ending', text='Кон. Остаток')
+        tree.heading('deficit_abs', text='Дефицит (модуль)')
+
+        tree.column('code', width=120, anchor='center')
+        tree.column('name', width=280, anchor='w')
+        tree.column('brand', width=120, anchor='center')
+        tree.column('start', width=110, anchor='center')
+        tree.column('expense', width=110, anchor='center')
+        tree.column('ending', width=110, anchor='center')
+        tree.column('deficit_abs', width=130, anchor='center')
+
+        tree.pack(side='left', fill='both', expand=True)
+        scroll = Scrollbar(tree_frame, orient='vertical', command=tree.yview)
+        tree.configure(yscrollcommand=scroll.set)
+        scroll.pack(side='right', fill='y')
+
+        for _, row in rows_df.iterrows():
+            tree.insert('', 'end', values=(
+                row['КОД ГП'],
+                row['Наименование ГП'],
+                row['Бренд'],
+                f"{row['Нач. остаток']:.2f}" if pd.notna(row['Нач. остаток']) else "",
+                f"{row['Расход']:.2f}" if pd.notna(row['Расход']) else "",
+                f"{row['Кон. Остаток']:.2f}" if pd.notna(row['Кон. Остаток']) else "",
+                f"{row['Дефицит (модуль)']:.2f}" if pd.notna(row['Дефицит (модуль)']) else ""
+            ))
+
+        btn_frame = Frame(dlg, bg=self.colors['background'])
+        btn_frame.pack(pady=10)
+
+        def do_export():
+            save_path = filedialog.asksaveasfilename(
+                parent=dlg,
+                defaultextension=".xlsx",
+                filetypes=[("Excel файлы", "*.xlsx")],
+                title="Сохранить дефицит ГП"
+            )
+            if not save_path:
+                return
+            try:
+                export_df = rows_df[['КОД ГП', 'Наименование ГП', 'Бренд', 'Нач. остаток', 'Расход', 'Кон. Остаток', 'Дефицит (модуль)']].copy()
+                export_df.to_excel(save_path, index=False, engine='openpyxl')
+                messagebox.showinfo("Экспорт", f"Данные сохранены в {save_path}", parent=dlg)
+                self.logger.info(f"Экспорт дефицита ГП: {save_path}")
+            except Exception as e:
+                messagebox.showerror("Ошибка экспорта", str(e), parent=dlg)
+                self.logger.error(f"Ошибка экспорта дефицита ГП: {e}")
+
+        self.create_modern_button(btn_frame, "📊 Экспорт в Excel", do_export, 'primary').pack(side='left', padx=5)
+        self.create_modern_button(btn_frame, "Закрыть", lambda: self.safe_destroy_dialog(dlg), 'secondary').pack(side='left', padx=5)
 
     def _fpr_refresh_recipe_list(self):
         """Обновить список готовой продукции в диалоге."""
