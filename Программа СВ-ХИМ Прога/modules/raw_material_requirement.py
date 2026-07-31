@@ -52,6 +52,7 @@ def load_recipes_from_excel(file_path: str) -> List[Dict]:
     grouped = df.groupby(['code_product', 'name_product', 'rc_number'])
     for (code, name, rc), group in grouped:
         components = {}
+        component_names = {}
         for _, row in group.iterrows():
             percent_val = row['percent']
             if pd.isna(percent_val):
@@ -66,6 +67,9 @@ def load_recipes_from_excel(file_path: str) -> List[Dict]:
             if not comp_code:
                 continue
             components[comp_code] = percent / 100.0
+            comp_name = str(row.get('name_component', '')).strip() if not pd.isna(row.get('name_component')) else ''
+            if comp_name:
+                component_names[comp_code] = comp_name
 
         if not components:
             continue
@@ -79,7 +83,8 @@ def load_recipes_from_excel(file_path: str) -> List[Dict]:
             'code': str(code).strip(),
             'name': str(name).strip(),
             'rc_number': str(rc).strip(),
-            'components': components
+            'components': components,
+            'component_names': component_names
         })
 
     return recipes
