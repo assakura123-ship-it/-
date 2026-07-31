@@ -3612,13 +3612,23 @@ class ModernStartWindow:
                     messagebox.showerror("Ошибка", f"Не удалось создать накладную:\n{str(e)}")
                     self.logger.error(f"Ошибка создания накладной: {e}")
 
-            save_btn = self.create_modern_button(button_frame, "💾 Сохранить", save_invoice, 'success')
+            save_btn = self.create_modern_button(button_frame, "✅ Провести накладную", save_invoice, 'success')
             save_btn.pack(side='left', padx=10)
+            ToolTip(save_btn, "Сохранить документ и сразу провести его по складу: обновятся остатки (списание/приход/перемещение)")
+
+            info_label = Label(
+                button_frame,
+                text="При проведении документа складские остатки изменятся согласно типу операции",
+                font=self.fonts['caption'],
+                bg=self.colors['background'],
+                fg=self.colors['text_muted']
+            )
+            info_label.pack(side='left', padx=(10, 0))
 
             cancel_btn = self.create_modern_button(button_frame, "Отмена", lambda: self.safe_destroy_dialog(dialog), 'secondary')
             cancel_btn.pack(side='right', padx=10)
 
-            self.logger.info("Открыт диалог создания накладной")
+            self.logger.info("Открыт диалог создания/проведения накладной")
 
         except Exception as e:
             self.logger.error(f"Ошибка открытия диалога накладной: {e}")
