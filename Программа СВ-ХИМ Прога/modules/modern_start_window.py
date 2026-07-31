@@ -4,7 +4,7 @@ from tkinter import (
     Frame, Label, LabelFrame, Listbox, END, StringVar, Entry, Scrollbar,
     BooleanVar, Text
 )
-from tkinter import messagebox, filedialog
+from tkinter import messagebox, filedialog, simpledialog
 from tkinter import ttk
 
 import os

@@ -22,40 +22,55 @@ import pandas as pd
 
 
 def load_recipes_from_excel(file_path: str) -> List[Dict]:
-    """Загрузить рецептуры готовой продукции из Excel."""
+    """Загрузить рецептуры (спецификации) готовой продукции из Excel.
+
+    Аналогично load_recipes_from_excel() из raw_material_requirement.py, но адаптировано
+    под готовую продукцию. Если в файле присутствует номер РЦ/рецептуры, группировка
+    ведётся по коду продукта + номеру РЦ (как для полуфабрикатов). Если номер РЦ отсутствует —
+    группировка только по продукту для обратной совместимости.
+    """
     df = pd.read_excel(file_path)
 
     rename_map = {}
     for col in df.columns:
         clean = col.strip().lower()
-        if 'код продукта' in clean or 'код готовой продукции' in clean:
+        if 'код продукта' in clean or 'код готовой продукции' in clean or 'артикул' in clean:
             rename_map[col] = 'code_product'
         elif 'наименование' in clean and 'компонент' not in clean and 'норма' not in clean:
             rename_map[col] = 'name_product'
-        elif 'номер рц' in clean or 'номер рц' in clean:
+        elif 'номер рц' in clean or 'рц' in clean or 'рецептура' in clean or 'recipe' in clean:
             rename_map[col] = 'rc_number'
         elif 'код компонента' in clean or 'код п/ф' in clean or 'код полуфабриката' in clean:
             rename_map[col] = 'code_component'
         elif 'компонент' in clean and 'код' not in clean:
             rename_map[col] = 'name_component'
-        elif 'процент' in clean:
+        elif 'процент' in clean or '%' in clean:
             rename_map[col] = 'percent'
 
     df.rename(columns=rename_map, inplace=True)
 
+    # Обязательные колонки — аналогично raw_material_requirement, но rc_number может отсутствовать
     required = ['code_product', 'name_product', 'code_component', 'percent']
     for col in required:
         if col not in df.columns:
             raise ValueError(f"В файле спецификаций не найден обязательный столбец: {col}")
 
+    # Если в файле есть номер РЦ — группируем по нему, как для полуфабрикатов
+    has_rc_number = 'rc_number' in df.columns
+    group_cols = ['code_product', 'name_product', 'rc_number'] if has_rc_number else ['code_product', 'name_product']
+
     recipes = []
-    grouped = df.groupby(['code_product', 'name_product'])
-    for (code, name), group in grouped:
+    grouped = df.groupby(group_cols, sort=False)
+    for group_key, group in grouped:
+        if has_rc_number:
+            code, name, rc = group_key
+            rc = str(rc).strip() if not pd.isna(rc) else ''
+        else:
+            code, name = group_key
+            rc = ''
+
         components = {}
-        rc_number = ''
         for _, row in group.iterrows():
-            if not rc_number and 'rc_number' in row and not pd.isna(row['rc_number']):
-                rc_number = str(row['rc_number']).strip()
             percent_val = row['percent']
             if pd.isna(percent_val):
                 continue
@@ -80,7 +95,7 @@ def load_recipes_from_excel(file_path: str) -> List[Dict]:
         recipes.append({
             'code': str(code).strip(),
             'name': str(name).strip(),
-            'rc_number': rc_number,
+            'rc_number': rc,
             'components': components
         })
 
