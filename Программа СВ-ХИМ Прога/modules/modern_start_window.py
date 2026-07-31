@@ -17,6 +17,7 @@ from modules.ui_theme import COLORS, FONTS
 from modules import invoice_excel
 from modules import raw_material_requirement as rm_req
 from modules import finished_product_requirement as fp_req
+from modules.tabs import FinishedProductsTab
 
 
 class ToolTip:
@@ -561,6 +562,7 @@ class ModernStartWindow:
             self.create_invoice_tab()
             self.create_logs_tab()
             self.create_import_export_tab()
+            self.create_finished_products_tab()
 
             self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_changed)
 
@@ -1753,6 +1755,15 @@ class ModernStartWindow:
 
         except Exception as e:
             self.logger.error(f"Ошибка создания вкладки импорта/экспорта: {e}")
+            raise
+
+    def create_finished_products_tab(self):
+        """Создание вкладки 'Готовая продукция' со спецификациями."""
+        try:
+            FinishedProductsTab(self.master, self.notebook, self)
+            self.logger.debug("Вкладка 'Готовая продукция' создана успешно")
+        except Exception as e:
+            self.logger.error(f"Ошибка создания вкладки готовой продукции: {e}")
             raise
 
     def create_import_export_content(self, parent, is_norms=False):
