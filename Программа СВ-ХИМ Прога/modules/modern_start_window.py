@@ -15,6 +15,7 @@ from modules.logger import system_logger, LogLevel
 from modules.database import db_manager
 from modules.ui_theme import COLORS, FONTS
 from modules import invoice_excel
+from modules import raw_material_requirement as rm_req
 
 
 class ToolTip:
@@ -652,6 +653,7 @@ class ModernStartWindow:
                 ("📄 Создать карту", self.open_editor_tab, 'primary'),
                 ("📋 Просмотр карт", lambda: self.notebook.select(1), 'secondary'),
                 ("🏭 Управление складом", lambda: self.notebook.select(2), 'secondary'),
+                ("🧪 Потребность сырья", self.open_raw_material_requirement, 'secondary'),
                 ("🗂️ Номенклатура", lambda: self.notebook.select(3), 'secondary'),
                 ("📤 Импорт/Экспорт", lambda: self.notebook.select(5), 'secondary'),
                 ("📊 Системные логи", lambda: self.notebook.select(4), 'secondary')
@@ -4413,3 +4415,517 @@ class ModernStartWindow:
         except Exception as e:
             self.logger.error(f"Ошибка печати накладной: {e}")
             messagebox.showerror("Ошибка", f"Не удалось распечатать:\n{str(e)}")
+
+    # ===================== ПОТРЕБНОСТЬ СЫРЬЯ =====================
+
+    def open_raw_material_requirement(self):
+        """Открыть диалог расчёта потребности сырья на полуфабрикаты."""
+        try:
+            self.logger.info("Открытие диалога расчёта потребности сырья")
+            dialog, main_frame = self.create_dialog(
+                "Потребность сырья на полуфабрикаты", 1100, 750,
+                header_color=self.colors['primary']
+            )
+            dialog.resizable(True, True)
+
+            # Верхняя панель: загрузка файлов
+            load_frame = Frame(main_frame, bg=self.colors['background'])
+            load_frame.pack(fill='x', pady=(0, 10))
+
+            self._rmr_recipes_path = StringVar()
+            self._rmr_inventory_path = StringVar()
+            self._rmr_recipes = []
+            self._rmr_inventory_summary = {}
+            self._rmr_inventory_details = []
+            self._rmr_inventory_df = None
+            self._rmr_cart = []
+            self._rmr_current_available = []
+
+            def choose_recipes():
+                path = filedialog.askopenfilename(
+                    parent=dialog,
+                    filetypes=[("Excel файлы", "*.xlsx *.xls")],
+                    title="Выберите файл рецептур"
+                )
+                if path:
+                    self._rmr_recipes_path.set(path)
+                    try:
+                        self._rmr_recipes = rm_req.load_recipes_from_excel(path)
+                        self._rmr_refresh_recipe_list()
+                        self.status_label.config(text=f"Загружено {len(self._rmr_recipes)} рецептур")
+                        self.logger.info(f"Загружены рецептуры: {path}")
+                    except Exception as e:
+                        messagebox.showerror("Ошибка загрузки рецептур", str(e), parent=dialog)
+                        self.logger.error(f"Ошибка загрузки рецептур: {e}")
+
+            def choose_inventory():
+                path = filedialog.askopenfilename(
+                    parent=dialog,
+                    filetypes=[("Excel файлы", "*.xlsx *.xls")],
+                    title="Выберите файл склада"
+                )
+                if path:
+                    self._rmr_inventory_path.set(path)
+                    try:
+                        summary, details, orig_df = rm_req.load_inventory_from_excel(path)
+                        self._rmr_inventory_summary = summary
+                        self._rmr_inventory_details = details
+                        self._rmr_inventory_df = orig_df
+                        self._rmr_refresh_inventory_tree()
+                        self._rmr_refresh_recipe_list()
+                        self.status_label.config(
+                            text=f"Склад: {len(details)} позиций, {len(summary)} компонентов"
+                        )
+                        self.logger.info(f"Загружен склад: {path}")
+                    except Exception as e:
+                        messagebox.showerror("Ошибка загрузки склада", str(e), parent=dialog)
+                        self.logger.error(f"Ошибка загрузки склада: {e}")
+
+            Label(load_frame, text="Рецептуры:", font=self.fonts['body'],
+                  bg=self.colors['background']).pack(side='left')
+            Entry(load_frame, textvariable=self._rmr_recipes_path, font=self.fonts['body'],
+                  width=40, state='readonly').pack(side='left', padx=(5, 5))
+            self.create_modern_button(load_frame, "Выбрать...", choose_recipes, 'secondary').pack(side='left', padx=5)
+
+            Label(load_frame, text="Склад:", font=self.fonts['body'],
+                  bg=self.colors['background']).pack(side='left', padx=(20, 0))
+            Entry(load_frame, textvariable=self._rmr_inventory_path, font=self.fonts['body'],
+                  width=40, state='readonly').pack(side='left', padx=(5, 5))
+            self.create_modern_button(load_frame, "Выбрать...", choose_inventory, 'secondary').pack(side='left', padx=5)
+
+            # Основная панель: PanedWindow
+            paned = ttk.PanedWindow(main_frame, orient='horizontal')
+            paned.pack(fill='both', expand=True, pady=10)
+
+            # Левая часть: рецептуры
+            left_frame = Frame(paned, bg=self.colors['background'])
+            paned.add(left_frame, weight=50)
+
+            recipe_card = LabelFrame(left_frame, text="Рецептуры полуфабрикатов",
+                                     font=self.fonts['body_semibold'],
+                                     padx=10, pady=10, bg=self.colors['background'])
+            recipe_card.pack(fill='both', expand=True)
+
+            search_frame = Frame(recipe_card, bg=self.colors['background'])
+            search_frame.pack(fill='x', pady=(0, 5))
+            Label(search_frame, text="Поиск:", font=self.fonts['body'],
+                  bg=self.colors['background']).pack(side='left')
+            self._rmr_search_var = StringVar()
+            self._rmr_search_var.trace('w', lambda *a: self._rmr_refresh_recipe_list())
+            Entry(search_frame, textvariable=self._rmr_search_var, font=self.fonts['body'],
+                  width=20).pack(side='left', padx=(5, 0))
+
+            self._rmr_recipe_tree = ttk.Treeview(
+                recipe_card, columns=('code', 'name', 'rc', 'max'), show='headings', height=10
+            )
+            self._rmr_recipe_tree.heading('code', text='Код')
+            self._rmr_recipe_tree.heading('name', text='Наименование')
+            self._rmr_recipe_tree.heading('rc', text='РЦ')
+            self._rmr_recipe_tree.heading('max', text='Макс. ед.')
+            self._rmr_recipe_tree.column('code', width=80, anchor='center')
+            self._rmr_recipe_tree.column('name', width=180, anchor='w')
+            self._rmr_recipe_tree.column('rc', width=50, anchor='center')
+            self._rmr_recipe_tree.column('max', width=80, anchor='center')
+            self._rmr_recipe_tree.pack(side='left', fill='both', expand=True)
+            rec_scroll = Scrollbar(recipe_card, orient='vertical', command=self._rmr_recipe_tree.yview)
+            self._rmr_recipe_tree.configure(yscrollcommand=rec_scroll.set)
+            rec_scroll.pack(side='right', fill='y')
+            self._rmr_recipe_tree.bind('<<TreeviewSelect>>', self._rmr_on_recipe_select)
+            self._rmr_recipe_tree.bind('<Double-Button-1>', lambda e: self._rmr_add_to_cart(dialog))
+
+            # Правая часть: детали, корзина, склад
+            right_frame = Frame(paned, bg=self.colors['background'])
+            paned.add(right_frame, weight=50)
+
+            detail_card = LabelFrame(right_frame, text="Состав рецепта",
+                                     font=self.fonts['body_semibold'],
+                                     padx=10, pady=10, bg=self.colors['background'])
+            detail_card.pack(fill='both', expand=True, pady=(0, 5))
+
+            self._rmr_comp_tree = ttk.Treeview(
+                detail_card, columns=('comp', 'name', 'percent'), show='headings', height=5
+            )
+            self._rmr_comp_tree.heading('comp', text='Код сырья')
+            self._rmr_comp_tree.heading('name', text='Наименование')
+            self._rmr_comp_tree.heading('percent', text='Доля, %')
+            self._rmr_comp_tree.column('comp', width=80, anchor='center')
+            self._rmr_comp_tree.column('name', width=150, anchor='w')
+            self._rmr_comp_tree.column('percent', width=70, anchor='center')
+            self._rmr_comp_tree.pack(fill='both', expand=True)
+
+            btn_frame = Frame(right_frame, bg=self.colors['background'])
+            btn_frame.pack(fill='x', pady=5)
+            self.create_modern_button(btn_frame, "➕ В корзину",
+                                      lambda: self._rmr_add_to_cart(dialog), 'success').pack(side='left', padx=3)
+            self.create_modern_button(btn_frame, "🗑️ Удалить",
+                                      lambda: self._rmr_remove_from_cart(dialog), 'danger').pack(side='left', padx=3)
+            self.create_modern_button(btn_frame, "🧮 Потребность",
+                                      lambda: self._rmr_show_requirements(dialog), 'primary').pack(side='left', padx=3)
+
+            cart_card = LabelFrame(right_frame, text="Корзина производства",
+                                 font=self.fonts['body_semibold'],
+                                 padx=10, pady=10, bg=self.colors['background'])
+            cart_card.pack(fill='both', expand=True, pady=(0, 5))
+
+            self._rmr_cart_tree = ttk.Treeview(
+                cart_card, columns=('code', 'name', 'qty'), show='headings', height=5
+            )
+            self._rmr_cart_tree.heading('code', text='Код')
+            self._rmr_cart_tree.heading('name', text='Наименование')
+            self._rmr_cart_tree.heading('qty', text='Кол-во')
+            self._rmr_cart_tree.column('code', width=80, anchor='center')
+            self._rmr_cart_tree.column('name', width=150, anchor='w')
+            self._rmr_cart_tree.column('qty', width=60, anchor='center')
+            self._rmr_cart_tree.pack(side='left', fill='both', expand=True)
+            cart_scroll = Scrollbar(cart_card, orient='vertical', command=self._rmr_cart_tree.yview)
+            self._rmr_cart_tree.configure(yscrollcommand=cart_scroll.set)
+            cart_scroll.pack(side='right', fill='y')
+
+            inv_card = LabelFrame(right_frame, text="Остатки на складе",
+                                  font=self.fonts['body_semibold'],
+                                  padx=10, pady=10, bg=self.colors['background'])
+            inv_card.pack(fill='both', expand=True)
+
+            inv_toolbar = Frame(inv_card, bg=self.colors['background'])
+            inv_toolbar.pack(fill='x', pady=(0, 5))
+            self.create_modern_button(inv_toolbar, "Развернуть",
+                                      lambda: self._rmr_expand_all_inventory(), 'secondary').pack(side='left', padx=3)
+            self.create_modern_button(inv_toolbar, "Свернуть",
+                                      lambda: self._rmr_collapse_all_inventory(), 'secondary').pack(side='left', padx=3)
+
+            self._rmr_inv_tree = ttk.Treeview(
+                inv_card, columns=('location', 'start', 'income', 'expense', 'ending'),
+                show='tree headings', height=8
+            )
+            self._rmr_inv_tree.heading('#0', text='Код / Наименование')
+            self._rmr_inv_tree.heading('location', text='Место')
+            self._rmr_inv_tree.heading('start', text='Нач. остаток')
+            self._rmr_inv_tree.heading('income', text='Приход')
+            self._rmr_inv_tree.heading('expense', text='Расход')
+            self._rmr_inv_tree.heading('ending', text='Кон. остаток')
+            self._rmr_inv_tree.column('#0', width=220, anchor='w')
+            self._rmr_inv_tree.column('location', width=100, anchor='center')
+            self._rmr_inv_tree.column('start', width=80, anchor='center')
+            self._rmr_inv_tree.column('income', width=80, anchor='center')
+            self._rmr_inv_tree.column('expense', width=80, anchor='center')
+            self._rmr_inv_tree.column('ending', width=80, anchor='center')
+            self._rmr_inv_tree.pack(side='left', fill='both', expand=True)
+            inv_scroll = Scrollbar(inv_card, orient='vertical', command=self._rmr_inv_tree.yview)
+            self._rmr_inv_tree.configure(yscrollcommand=inv_scroll.set)
+            inv_scroll.pack(side='right', fill='y')
+
+            # Нижняя панель: кнопки закрытия и подсказка
+            bottom_frame = Frame(main_frame, bg=self.colors['background'])
+            bottom_frame.pack(fill='x', pady=(10, 0))
+            self.create_modern_button(bottom_frame, "❌ Закрыть",
+                                      lambda: self.safe_destroy_dialog(dialog), 'secondary').pack(side='right')
+            Label(bottom_frame,
+                  text="Двойной клик по рецептуре добавляет её в корзину. Загрузите рецептуры и склад для расчёта.",
+                  font=self.fonts['caption'],
+                  bg=self.colors['background'],
+                  fg=self.colors['text_muted']).pack(side='left')
+
+            self._rmr_refresh_recipe_list()
+            self._rmr_refresh_inventory_tree()
+            self.logger.info("Диалог расчёта потребности сырья открыт")
+
+        except Exception as e:
+            self.logger.error(f"Ошибка открытия диалога потребности сырья: {e}")
+            messagebox.showerror("Ошибка", f"Не удалось открыть диалог:\n{str(e)}")
+
+    def _rmr_refresh_recipe_list(self):
+        """Обновить список рецептур в диалоге потребности сырья."""
+        try:
+            if not hasattr(self, '_rmr_recipe_tree'):
+                return
+
+            for item in self._rmr_recipe_tree.get_children():
+                self._rmr_recipe_tree.delete(item)
+
+            recipes = rm_req.enrich_recipes_with_availability(
+                getattr(self, '_rmr_recipes', []),
+                getattr(self, '_rmr_inventory_summary', {})
+            )
+
+            search_text = self._rmr_search_var.get().strip().lower() if hasattr(self, '_rmr_search_var') else ''
+            if search_text:
+                recipes = [r for r in recipes if search_text in r['code'].lower() or search_text in r['name'].lower()]
+
+            self._rmr_current_available = recipes
+            for rec in recipes:
+                self._rmr_recipe_tree.insert('', 'end',
+                    values=(rec['code'], rec['name'], rec['rc_number'], rec['max_units']))
+
+            for item in self._rmr_comp_tree.get_children():
+                self._rmr_comp_tree.delete(item)
+        except Exception as e:
+            self.logger.error(f"Ошибка обновления списка рецептур: {e}")
+
+    def _rmr_on_recipe_select(self, event=None):
+        """Показать состав выбранного рецепта."""
+        try:
+            selected = self._rmr_recipe_tree.selection()
+            if not selected:
+                return
+            idx = self._rmr_recipe_tree.index(selected[0])
+            if idx < 0 or idx >= len(self._rmr_current_available):
+                return
+            rec = self._rmr_current_available[idx]
+            for item in self._rmr_comp_tree.get_children():
+                self._rmr_comp_tree.delete(item)
+            for comp_code, share in rec['components'].items():
+                comp_name = ''
+                for det in self._rmr_inventory_details:
+                    if det['code'] == comp_code:
+                        comp_name = det['name']
+                        break
+                self._rmr_comp_tree.insert('', 'end',
+                    values=(comp_code, comp_name, f"{share * 100:.1f}"))
+        except Exception as e:
+            self.logger.error(f"Ошибка отображения состава рецепта: {e}")
+
+    def _rmr_add_to_cart(self, parent_dialog):
+        """Добавить выбранную рецептуру в корзину."""
+        try:
+            selected = self._rmr_recipe_tree.selection()
+            if not selected:
+                messagebox.showwarning("Предупреждение", "Выберите рецептуру в таблице", parent=parent_dialog)
+                return
+
+            idx = self._rmr_recipe_tree.index(selected[0])
+            if idx < 0 or idx >= len(self._rmr_current_available):
+                return
+            rec = self._rmr_current_available[idx]
+
+            qty_str = simpledialog.askstring("Количество", "Введите количество:", parent=parent_dialog)
+            if not qty_str:
+                return
+            try:
+                qty = int(qty_str)
+            except ValueError:
+                messagebox.showerror("Ошибка", "Количество должно быть целым числом", parent=parent_dialog)
+                return
+            if qty < 1:
+                messagebox.showerror("Ошибка", "Количество должно быть положительным", parent=parent_dialog)
+                return
+
+            for item in self._rmr_cart:
+                if item['recipe']['code'] == rec['code'] and item['recipe']['rc_number'] == rec['rc_number']:
+                    item['qty'] = qty
+                    self._rmr_refresh_cart_view()
+                    return
+
+            self._rmr_cart.append({'recipe': rec, 'qty': qty})
+            self._rmr_refresh_cart_view()
+        except Exception as e:
+            self.logger.error(f"Ошибка добавления в корзину: {e}")
+
+    def _rmr_remove_from_cart(self, parent_dialog):
+        """Удалить выбранную позицию из корзины."""
+        try:
+            selected = self._rmr_cart_tree.selection()
+            if not selected:
+                messagebox.showwarning("Предупреждение", "Выберите позицию в корзине", parent=parent_dialog)
+                return
+            idx = self._rmr_cart_tree.index(selected[0])
+            if idx < len(self._rmr_cart):
+                del self._rmr_cart[idx]
+                self._rmr_refresh_cart_view()
+        except Exception as e:
+            self.logger.error(f"Ошибка удаления из корзины: {e}")
+
+    def _rmr_refresh_cart_view(self):
+        """Обновить отображение корзины."""
+        try:
+            for item in self._rmr_cart_tree.get_children():
+                self._rmr_cart_tree.delete(item)
+            for item in self._rmr_cart:
+                rec = item['recipe']
+                self._rmr_cart_tree.insert('', 'end',
+                    values=(rec['code'], rec['name'], item['qty']))
+        except Exception as e:
+            self.logger.error(f"Ошибка обновления корзины: {e}")
+
+    def _rmr_refresh_inventory_tree(self):
+        """Обновить дерево остатков склада."""
+        try:
+            if not hasattr(self, '_rmr_inv_tree'):
+                return
+
+            expanded = set()
+            for item in self._rmr_inv_tree.get_children():
+                if self._rmr_inv_tree.item(item, 'open'):
+                    expanded.add(self._rmr_inv_tree.item(item, 'text'))
+
+            for item in self._rmr_inv_tree.get_children():
+                self._rmr_inv_tree.delete(item)
+
+            grouped = {}
+            for det in self._rmr_inventory_details:
+                code = det['code']
+                if code not in grouped:
+                    grouped[code] = {
+                        'name': det['name'],
+                        'locations': [],
+                        'start': 0.0,
+                        'income': 0.0,
+                        'expense': 0.0,
+                        'ending': 0.0
+                    }
+                grouped[code]['start'] += det['start']
+                grouped[code]['income'] += det['income']
+                grouped[code]['expense'] += det['expense']
+                grouped[code]['ending'] += det['ending']
+                grouped[code]['locations'].append(det)
+
+            for code, data in grouped.items():
+                parent = self._rmr_inv_tree.insert('', 'end',
+                    text=f"{code} - {data['name']}",
+                    values=('Сумма', data['start'], data['income'], data['expense'], data['ending']),
+                    open=True)
+                for det in data['locations']:
+                    self._rmr_inv_tree.insert(parent, 'end',
+                        text=det['location'],
+                        values=(det['location'], det['start'], det['income'], det['expense'], det['ending']))
+
+            for item in self._rmr_inv_tree.get_children():
+                if self._rmr_inv_tree.item(item, 'text') in expanded:
+                    self._rmr_inv_tree.item(item, open=True)
+        except Exception as e:
+            self.logger.error(f"Ошибка обновления дерева склада: {e}")
+
+    def _rmr_expand_all_inventory(self):
+        for item in self._rmr_inv_tree.get_children():
+            self._rmr_expand_recursive(self._rmr_inv_tree, item)
+
+    def _rmr_collapse_all_inventory(self):
+        for item in self._rmr_inv_tree.get_children():
+            self._rmr_collapse_recursive(self._rmr_inv_tree, item)
+
+    def _rmr_expand_recursive(self, tree, item):
+        tree.item(item, open=True)
+        for child in tree.get_children(item):
+            self._rmr_expand_recursive(tree, child)
+
+    def _rmr_collapse_recursive(self, tree, item):
+        tree.item(item, open=False)
+        for child in tree.get_children(item):
+            self._rmr_collapse_recursive(tree, child)
+
+    def _rmr_show_requirements(self, parent_dialog):
+        """Показать диалог с расчётом потребности сырья."""
+        try:
+            if not self._rmr_cart:
+                messagebox.showwarning("Предупреждение", "Корзина пуста", parent=parent_dialog)
+                return
+
+            req = rm_req.calculate_requirements(
+                self._rmr_cart,
+                self._rmr_inventory_summary,
+                self._rmr_inventory_details
+            )
+
+            if not req:
+                messagebox.showinfo("Информация", "Нет данных для расчёта потребности", parent=parent_dialog)
+                return
+
+            dlg = tk.Toplevel(parent_dialog)
+            dlg.title("Потребность в сырье")
+            dlg.geometry("1000x700")
+            dlg.configure(bg=self.colors['background'])
+            dlg.transient(parent_dialog)
+            dlg.resizable(True, True)
+
+            ctrl_frame = Frame(dlg, bg=self.colors['background'])
+            ctrl_frame.pack(fill='x', padx=10, pady=10)
+
+            tree = ttk.Treeview(dlg, columns=('name', 'recipe', 'need', 'stock', 'deficit'),
+                                show='tree headings', height=20)
+            tree.heading('#0', text='Код компонента')
+            tree.heading('name', text='Наименование')
+            tree.heading('recipe', text='Полуфабрикат')
+            tree.heading('need', text='Требуется')
+            tree.heading('stock', text='На складе')
+            tree.heading('deficit', text='Дефицит')
+            tree.column('#0', width=120, anchor='w')
+            tree.column('name', width=150, anchor='w')
+            tree.column('recipe', width=220, anchor='w')
+            tree.column('need', width=90, anchor='center')
+            tree.column('stock', width=90, anchor='center')
+            tree.column('deficit', width=90, anchor='center')
+            tree.pack(fill='both', expand=True, padx=10, pady=(0, 10))
+
+            for comp_code, data in req.items():
+                stock = self._rmr_inventory_summary.get(comp_code, 0.0) if self._rmr_inventory_summary else 0.0
+                deficit = data['total'] - stock
+                parent = tree.insert('', 'end',
+                    text=comp_code,
+                    values=(
+                        data['name'],
+                        'Сумма',
+                        f"{data['total']:.2f}",
+                        f"{stock:.2f}" if self._rmr_inventory_summary else "—",
+                        f"{deficit:.2f}" if self._rmr_inventory_summary and deficit > 0 else (
+                            "0.00" if self._rmr_inventory_summary else "—")
+                    ),
+                    open=True)
+                for det in data['details']:
+                    tree.insert(parent, 'end',
+                        text='',
+                        values=(
+                            data['name'],
+                            f"{det['recipe_code']} {det['recipe_name']} (x{det['qty_recipe']})",
+                            f"{det['need']:.2f}",
+                            '',
+                            ''
+                        ))
+
+            btn_frame = Frame(dlg, bg=self.colors['background'])
+            btn_frame.pack(pady=10)
+
+            def do_export():
+                file_path = filedialog.asksaveasfilename(
+                    parent=dlg,
+                    defaultextension=".xlsx",
+                    filetypes=[("Excel файлы", "*.xlsx")],
+                    title="Сохранить потребность"
+                )
+                if not file_path:
+                    return
+                try:
+                    rm_req.export_requirements_to_excel(req, self._rmr_inventory_summary, file_path)
+                    messagebox.showinfo("Экспорт", f"Данные сохранены в {file_path}", parent=dlg)
+                    self.logger.info(f"Экспорт потребности сырья: {file_path}")
+                except Exception as e:
+                    messagebox.showerror("Ошибка экспорта", str(e), parent=dlg)
+                    self.logger.error(f"Ошибка экспорта потребности: {e}")
+
+            def do_produce():
+                if not self._rmr_inventory_summary:
+                    messagebox.showwarning("Предупреждение", "Склад не загружен", parent=dlg)
+                    return
+                for comp_code, data in req.items():
+                    if self._rmr_inventory_summary.get(comp_code, 0) < data['total']:
+                        messagebox.showerror("Ошибка", f"Недостаточно сырья '{comp_code}'", parent=dlg)
+                        return
+                for item in self._rmr_cart:
+                    rec = item['recipe']
+                    qty = item['qty']
+                    self._rmr_inventory_summary, self._rmr_inventory_details = rm_req.produce(
+                        rec, qty, self._rmr_inventory_summary, self._rmr_inventory_details)
+                self._rmr_cart.clear()
+                self._rmr_refresh_cart_view()
+                self._rmr_refresh_inventory_tree()
+                self._rmr_refresh_recipe_list()
+                self.status_label.config(text="Производство по корзине выполнено")
+                self.logger.info("Производство по корзине выполнено")
+                messagebox.showinfo("Успех", "Производство выполнено, остатки склада обновлены", parent=dlg)
+                dlg.destroy()
+
+            self.create_modern_button(btn_frame, "⚙️ Произвести", do_produce, 'success').pack(side='left', padx=5)
+            self.create_modern_button(btn_frame, "📊 Экспорт в Excel", do_export, 'primary').pack(side='left', padx=5)
+            self.create_modern_button(btn_frame, "Закрыть", lambda: self.safe_destroy_dialog(dlg), 'secondary').pack(side='left', padx=5)
+
+        except Exception as e:
+            self.logger.error(f"Ошибка расчёта потребности: {e}")
+            messagebox.showerror("Ошибка", f"Не удалось рассчитать потребность:\n{str(e)}", parent=parent_dialog)
