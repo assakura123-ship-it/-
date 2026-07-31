@@ -189,6 +189,24 @@ class DatabaseManager:
                 )
             ''')
 
+            # Создание таблицы спецификаций готовой продукции
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS finished_product_specifications (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    product_code TEXT NOT NULL,
+                    product_name TEXT NOT NULL,
+                    component_code TEXT NOT NULL,
+                    component_name TEXT NOT NULL,
+                    quantity REAL NOT NULL CHECK (quantity >= 0),
+                    unit TEXT DEFAULT 'шт',
+                    sort_order INTEGER DEFAULT 0,
+                    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (product_code) REFERENCES products(product_code),
+                    UNIQUE(product_code, component_code)
+                )
+            ''')
+
             # Создание индексов для ускорения поиска
             self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_products_code ON products(product_code)')
             self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_recipes_product ON recipes(product_code)')
@@ -202,6 +220,9 @@ class DatabaseManager:
             # Индексы для таблицы номенклатуры
             self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_nomenclature_parent ON nomenclature(parent_id)')
             self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_nomenclature_product ON nomenclature(product_code)')
+            # Индексы для таблицы спецификаций готовой продукции
+            self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_finished_spec_product ON finished_product_specifications(product_code)')
+            self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_finished_spec_component ON finished_product_specifications(component_code)')
 
             self.conn.commit()
             self.logger.info(f"База данных инициализирована: {self.db_path}")
@@ -825,6 +846,173 @@ class DatabaseManager:
     def delete_recipe_component(self, component_id: int):
         """Удаление компонента из рецептуры"""
         self.execute_query('DELETE FROM recipe_components WHERE id = ?', (component_id,))
+
+    # ===================== СПЕЦИФИКАЦИИ ГОТОВОЙ ПРОДУКЦИИ =====================
+    def get_finished_products(self) -> List[Dict[str, Any]]:
+        """Получение списка готовой продукции (наименование содержит запятую) с количеством спецификаций."""
+        try:
+            result = self.execute_query('''
+                SELECT p.*,
+                       (SELECT COUNT(*) FROM finished_product_specifications s
+                        WHERE s.product_code = p.product_code) as spec_count
+                FROM products p
+                WHERE p.product_name LIKE '%,%'
+                ORDER BY p.product_name
+            ''')
+            return result if result is not None else []
+        except Exception as e:
+            self.logger.error(f"Ошибка получения готовой продукции: {e}")
+            return []
+
+    def get_finished_product_specifications(self, product_code: str) -> List[Dict[str, Any]]:
+        """Получение спецификаций для готовой продукции по коду продукта."""
+        try:
+            return self.execute_query('''
+                SELECT * FROM finished_product_specifications
+                WHERE product_code = ?
+                ORDER BY sort_order, id
+            ''', (product_code,))
+        except Exception as e:
+            self.logger.error(f"Ошибка получения спецификаций для {product_code}: {e}")
+            return []
+
+    def upsert_finished_product_specification(self, product_code: str, product_name: str,
+                                               component_code: str, component_name: str,
+                                               quantity: float, unit: str = 'шт') -> None:
+        """Создание или обновление спецификации готовой продукции."""
+        try:
+            existing = self.execute_query('''
+                SELECT id FROM finished_product_specifications
+                WHERE product_code = ? AND component_code = ?
+            ''', (product_code, component_code))
+            if existing:
+                self.execute_query('''
+                    UPDATE finished_product_specifications
+                    SET product_name = ?, component_name = ?, quantity = ?, unit = ?, updated_date = CURRENT_TIMESTAMP
+                    WHERE product_code = ? AND component_code = ?
+                ''', (product_name, component_name, quantity, unit, product_code, component_code))
+            else:
+                self.execute_query('''
+                    INSERT INTO finished_product_specifications
+                    (product_code, product_name, component_code, component_name, quantity, unit)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (product_code, product_name, component_code, component_name, quantity, unit))
+        except Exception as e:
+            self.logger.error(f"Ошибка upsert спецификации {product_code}/{component_code}: {e}")
+            raise
+
+    def delete_finished_product_specifications(self, product_code: str) -> bool:
+        """Удаление всех спецификаций готовой продукции по коду продукта."""
+        try:
+            self.execute_query('DELETE FROM finished_product_specifications WHERE product_code = ?', (product_code,))
+            return True
+        except Exception as e:
+            self.logger.error(f"Ошибка удаления спецификаций для {product_code}: {e}")
+            return False
+
+    def import_finished_product_specifications_from_excel(self, file_path: str,
+                                                           replace_existing: bool = False) -> bool:
+        """Импорт спецификаций готовой продукции из Excel.
+
+        Ожидаемые столбцы:
+            Код ГП, Наименование ГП новое (полное), КОД комп, Спецификация, Кол.
+        """
+        try:
+            df = pd.read_excel(file_path)
+            if df.empty:
+                raise ValueError("Файл Excel пуст")
+
+            # Нормализация заголовков
+            rename_map = {}
+            for col in df.columns:
+                clean = col.strip().lower()
+                if 'код гп' in clean or 'код готовой продукции' in clean or 'артикул' in clean:
+                    rename_map[col] = 'product_code'
+                elif 'наименование гп' in clean or 'наименование' in clean:
+                    rename_map[col] = 'product_name'
+                elif 'код комп' in clean or 'код компонента' in clean:
+                    rename_map[col] = 'component_code'
+                elif 'спецификация' in clean:
+                    rename_map[col] = 'component_name'
+                elif 'кол' in clean or 'количество' in clean or 'кол.' in clean:
+                    rename_map[col] = 'quantity'
+                elif 'ед' in clean or 'единица' in clean:
+                    rename_map[col] = 'unit'
+
+            df.rename(columns=rename_map, inplace=True)
+
+            required = ['product_code', 'product_name', 'component_code', 'component_name', 'quantity']
+            for col in required:
+                if col not in df.columns:
+                    raise ValueError(f"В файле не найден обязательный столбец: {col}")
+
+            if replace_existing:
+                # Удаляем существующие записи для всех продуктов, которые встречаются в файле
+                product_codes = df['product_code'].dropna().astype(str).str.strip().unique().tolist()
+                for code in product_codes:
+                    self.delete_finished_product_specifications(code)
+
+            for _, row in df.iterrows():
+                product_code = str(row['product_code']).strip() if not pd.isna(row['product_code']) else ''
+                product_name = str(row['product_name']).strip() if not pd.isna(row['product_name']) else ''
+                component_code = str(row['component_code']).strip() if not pd.isna(row['component_code']) else ''
+                component_name = str(row['component_name']).strip() if not pd.isna(row['component_name']) else ''
+                quantity_val = row['quantity']
+                unit = str(row['unit']).strip() if 'unit' in df.columns and not pd.isna(row['unit']) else 'шт'
+
+                if not product_code or not component_code or not product_name or not component_name:
+                    continue
+
+                try:
+                    quantity = float(quantity_val)
+                except (ValueError, TypeError):
+                    continue
+
+                # Убедимся, что продукт есть в справочнике
+                self.upsert_product(product_code, product_name, description='')
+                self.upsert_finished_product_specification(product_code, product_name,
+                                                           component_code, component_name, quantity, unit)
+
+            self.conn.commit()
+            self.logger.info(f"Спецификации готовой продукции импортированы из {file_path}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Ошибка импорта спецификаций готовой продукции: {e}")
+            raise
+
+    def export_finished_product_specifications_to_excel(self, output_path: str,
+                                                         product_code: str = None) -> bool:
+        """Экспорт спецификаций готовой продукции в Excel."""
+        try:
+            if product_code:
+                specs = self.get_finished_product_specifications(product_code)
+            else:
+                specs = self.execute_query('''
+                    SELECT * FROM finished_product_specifications
+                    ORDER BY product_code, sort_order, id
+                ''')
+
+            if not specs:
+                raise ValueError("Нет данных для экспорта")
+
+            rows = []
+            for spec in specs:
+                rows.append({
+                    'Код ГП': spec['product_code'],
+                    'Наименование ГП новое (полное)': spec['product_name'],
+                    'КОД комп': spec['component_code'],
+                    'Спецификация': spec['component_name'],
+                    'Кол.': spec['quantity'],
+                    'Ед. изм.': spec.get('unit', 'шт')
+                })
+
+            df = pd.DataFrame(rows)
+            df.to_excel(output_path, index=False, engine='openpyxl')
+            self.logger.info(f"Спецификации готовой продукции экспортированы в {output_path}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Ошибка экспорта спецификаций готовой продукции: {e}")
+            raise
 
     def create_loading_card(self, card_name: str, product_code: str, recipe_id: int,
                             reactor: str = "Р-1", batch_quantity: float = 1000.0) -> int:

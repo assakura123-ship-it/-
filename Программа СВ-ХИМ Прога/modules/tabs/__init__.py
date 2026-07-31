@@ -5,6 +5,7 @@ from .warehouse_tab import WarehouseTab
 from .products_tab import ProductsTab
 from .logs_tab import LogsTab
 from .import_export_tab import ImportExportTab
+from .finished_products_tab import FinishedProductsTab
 
 __all__ = [
     'HomeTab',
@@ -12,5 +13,6 @@ __all__ = [
     'WarehouseTab',
     'ProductsTab',
     'LogsTab',
-    'ImportExportTab'
+    'ImportExportTab',
+    'FinishedProductsTab'
 ]
