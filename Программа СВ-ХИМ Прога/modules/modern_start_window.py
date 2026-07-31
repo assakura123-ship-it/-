@@ -14,6 +14,7 @@ import pandas as pd
 from modules.logger import system_logger, LogLevel
 from modules.database import db_manager
 from modules.ui_theme import COLORS, FONTS
+from modules import invoice_excel
 
 
 class ToolTip:
@@ -3372,7 +3373,7 @@ class ModernStartWindow:
             warehouse_map = {w['component_code']: w for w in warehouse_items}
 
             dialog, main_frame = self.create_dialog(
-                "Создание требования-накладной", 950, 780,
+                "Создание требования-накладной", 950, 850,
                 header_color=self.colors['primary']
             )
             dialog.resizable(True, True)
@@ -3493,6 +3494,37 @@ class ModernStartWindow:
                 'warning', ''
             )
             clear_items_btn.pack(side='left', padx=3)
+
+            # Разделитель
+            separator = Frame(btn_row, bg=self.colors['background'], width=20)
+            separator.pack(side='left', padx=5)
+
+            # Кнопки сохранения / проведения / экспорта в верхнем ряду
+            draft_btn = self.create_modern_button(
+                btn_row, "💾 Сохранить черновик",
+                lambda: save_invoice(post=False), 'secondary'
+            )
+            draft_btn.pack(side='left', padx=3)
+            ToolTip(draft_btn, "Сохранить документ как черновик без изменения остатков")
+
+            post_btn = self.create_modern_button(
+                btn_row, "✅ Провести накладную",
+                lambda: save_invoice(post=True), 'success'
+            )
+            post_btn.pack(side='left', padx=3)
+            ToolTip(post_btn, "Сохранить документ и сразу провести его по складу")
+
+            pdf_btn = self.create_modern_button(
+                btn_row, "📄 PDF", export_invoice_pdf, 'primary'
+            )
+            pdf_btn.pack(side='left', padx=3)
+            ToolTip(pdf_btn, "Экспортировать текущий документ в PDF без сохранения в базу")
+
+            excel_btn = self.create_modern_button(
+                btn_row, "📊 Excel", export_invoice_excel, 'primary'
+            )
+            excel_btn.pack(side='left', padx=3)
+            ToolTip(excel_btn, "Экспортировать текущий документ в Excel без сохранения в базу")
 
             # Таблица позиций
             table_container = Frame(items_frame, bg=self.colors['surface'],
@@ -3666,13 +3698,103 @@ class ModernStartWindow:
                     messagebox.showerror("Ошибка", f"Не удалось создать накладную:\n{str(e)}")
                     self.logger.error(f"Ошибка создания накладной: {e}")
 
-            post_btn = self.create_modern_button(action_frame, "Провести накладную", lambda: save_invoice(post=True), 'success')
-            post_btn.pack(side='left', padx=(0, 8))
-            ToolTip(post_btn, "Сохранить документ и сразу провести его по складу: обновятся остатки (списание/приход/перемещение)")
+            def export_invoice_pdf():
+                """Экспортировать текущее требование-накладную в PDF без сохранения в базу."""
+                try:
+                    data = collect_invoice_data()
+                    if not data['items']:
+                        messagebox.showwarning("Внимание", "Добавьте хотя бы одну позицию с количеством > 0")
+                        return
 
-            draft_btn = self.create_modern_button(action_frame, "Сохранить черновик", lambda: save_invoice(post=False), 'secondary')
-            draft_btn.pack(side='left', padx=8)
-            ToolTip(draft_btn, "Сохранить документ как черновик без изменения остатков; провести позже кнопкой «Провести» в списке")
+                    from modules.invoice_pdf import generate_invoice_pdf, default_invoice_filename, get_invoices_dir
+
+                    invoice_stub = {
+                        'invoice_number': data['number'] or 'без_номера',
+                        'operation_type': data['operation_type'],
+                        'source_location': data['source'] or '—',
+                        'destination_location': data['destination'] or '—',
+                        'notes': data['notes'],
+                        'status': 'draft',
+                        'created_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    }
+                    items_stub = [
+                        {
+                            'component_code': it['component_code'],
+                            'component_name': it['component_name'],
+                            'quantity': it['quantity'],
+                            'unit': it['unit'],
+                        }
+                        for it in data['items']
+                    ]
+
+                    invoices_dir = get_invoices_dir()
+                    default_name = default_invoice_filename(invoice_stub)
+                    file_path = filedialog.asksaveasfilename(
+                        parent=dialog,
+                        defaultextension=".pdf",
+                        filetypes=[("PDF файлы", "*.pdf")],
+                        initialdir=invoices_dir,
+                        initialfile=default_name
+                    )
+                    if not file_path:
+                        return
+
+                    if generate_invoice_pdf(invoice_stub, items_stub, file_path):
+                        messagebox.showinfo("Успех", f"PDF-бланк сохранён:\n{file_path}")
+                        self.logger.info(f"Экспорт PDF из диалога создания: {file_path}")
+                    else:
+                        messagebox.showerror("Ошибка", "Не удалось сохранить PDF-бланк.")
+                except Exception as e:
+                    messagebox.showerror("Ошибка", f"Не удалось экспортировать PDF:\n{str(e)}")
+                    self.logger.error(f"Ошибка экспорта PDF из диалога создания: {e}")
+
+            def export_invoice_excel():
+                """Экспортировать текущее требование-накладную в Excel без сохранения в базу."""
+                try:
+                    data = collect_invoice_data()
+                    if not data['items']:
+                        messagebox.showwarning("Внимание", "Добавьте хотя бы одну позицию с количеством > 0")
+                        return
+
+                    invoice_stub = {
+                        'invoice_number': data['number'] or 'без_номера',
+                        'operation_type': data['operation_type'],
+                        'source_location': data['source'] or '—',
+                        'destination_location': data['destination'] or '—',
+                        'notes': data['notes'],
+                        'status': 'draft',
+                        'created_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    }
+                    items_stub = [
+                        {
+                            'component_code': it['component_code'],
+                            'component_name': it['component_name'],
+                            'quantity': it['quantity'],
+                            'unit': it['unit'],
+                        }
+                        for it in data['items']
+                    ]
+
+                    invoices_dir = invoice_excel.get_invoices_dir()
+                    default_name = invoice_excel.default_invoice_excel_filename(invoice_stub)
+                    file_path = filedialog.asksaveasfilename(
+                        parent=dialog,
+                        defaultextension=".xlsx",
+                        filetypes=[("Excel файлы", "*.xlsx")],
+                        initialdir=invoices_dir,
+                        initialfile=default_name
+                    )
+                    if not file_path:
+                        return
+
+                    if invoice_excel.generate_invoice_excel(invoice_stub, items_stub, file_path):
+                        messagebox.showinfo("Успех", f"Excel-бланк сохранён:\n{file_path}")
+                        self.logger.info(f"Экспорт Excel из диалога создания: {file_path}")
+                    else:
+                        messagebox.showerror("Ошибка", "Не удалось сохранить Excel-бланк.")
+                except Exception as e:
+                    messagebox.showerror("Ошибка", f"Не удалось экспортировать Excel:\n{str(e)}")
+                    self.logger.error(f"Ошибка экспорта Excel из диалога создания: {e}")
 
             cancel_btn = self.create_modern_button(action_frame, "Отмена", lambda: self.safe_destroy_dialog(dialog), 'secondary')
             cancel_btn.pack(side='right', padx=(8, 0))
